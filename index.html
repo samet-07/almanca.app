@@ -57,12 +57,32 @@
     .btn-das { background: var(--das); color: white; }
 
     .word-type-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #334155; color: var(--accent); margin-left: 6px; text-transform: uppercase; cursor: pointer; border: 1px solid #475569; }
-    .word-type-tag:hover { border-color: var(--accent); }
 
-    .chat-box { height: 380px; overflow-y: auto; background: #0b1120; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
-    .msg { padding: 10px 14px; border-radius: 8px; max-width: 80%; font-size: 14px; line-height: 1.4; }
-    .msg.user { background: var(--accent); color: #0f172a; align-self: flex-end; }
-    .msg.bot { background: var(--card); align-self: flex-start; }
+    /* WhatsApp Tarzı Chatbot & İnteraktif Alanlar */
+    .chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .chat-box { height: 420px; overflow-y: auto; background: #0b1120; border-radius: 10px; padding: 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 12px; border: 1px solid #334155; }
+    .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; }
+    .msg-wrapper.user { align-self: flex-end; align-items: flex-end; }
+    .msg-wrapper.bot { align-self: flex-start; align-items: flex-start; }
+    
+    .msg { padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45; word-break: break-word; position: relative; }
+    .msg.user { background: #0284c7; color: white; border-bottom-right-radius: 2px; }
+    .msg.bot { background: #1e293b; color: #f8fafc; border-bottom-left-radius: 2px; border: 1px solid #334155; }
+    .msg-footer { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; color: #64748b; }
+    
+    .quick-chips { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 10px; padding-bottom: 4px; }
+    .chip-btn { width: auto !important; background: #1e293b !important; color: #38bdf8 !important; border: 1px solid #334155 !important; padding: 5px 12px !important; font-size: 12px !important; border-radius: 16px !important; margin-bottom: 0 !important; cursor: pointer; white-space: nowrap; }
+    .chip-btn:hover { background: #334155 !important; }
+
+    .input-group { display: flex; gap: 8px; align-items: center; }
+    .mic-btn { width: auto !important; background: #334155 !important; color: white !important; padding: 12px 16px !important; border-radius: 8px !important; margin-bottom: 10px !important; font-size: 16px !important; }
+    .mic-btn.recording { background: #ef4444 !important; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
 
     .nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card); display: flex; border-top: 1px solid #334155; }
     .nav-btn { flex: 1; border: none; background: none; color: #94a3b8; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -170,13 +190,28 @@
       <p id="shortcuts-info" style="text-align:center; font-size:12px; color:#64748b; margin-top:5px;">Kısayollar: Boşluk: Çevir | R: Sesi Dinle</p>
     </div>
 
-    <!-- 3. SEKME: CHATBOT -->
+    <!-- 3. SEKME: CHATBOT (WHATSAPP TARZI & HIZLI) -->
     <div id="tab-coach" class="tab-content">
-      <div class="chat-box" id="chat-box">
-        <div class="msg bot">Hallo! Eklediğin tüm isimlere, fiillere, sıfatlara ve bağlaçlara tam hakimim. Nasıl çalışmak istersin?</div>
+      <div class="chat-header">
+        <span style="font-size: 13px; color: #94a3b8;">💬 Almanca Pratik Koçu</span>
+        <button onclick="clearChatHistory()" style="width:auto; padding:4px 10px; font-size:12px; background:none; color:#ef4444; border:1px solid #ef4444; border-radius:6px; margin:0;">🗑️ Temizle</button>
       </div>
-      <input type="text" id="chat-input" placeholder="Koça mesaj yaz..." />
-      <button onclick="sendChatMessage()">Gönder</button>
+
+      <div class="chat-box" id="chat-box"></div>
+
+      <!-- Hızlı Aksiyon Butonları (Chips) -->
+      <div class="quick-chips">
+        <button class="chip-btn" onclick="sendQuickPrompt('Son cümleni Türkçe olarak açıklar mısın?')">💡 Türkçesi ne?</button>
+        <button class="chip-btn" onclick="sendQuickPrompt('Bunu daha basit ve A2 seviyesinde bir Almanca ile tekrar söyler misin?')">🔄 Basit açıkla (A2)</button>
+        <button class="chip-btn" onclick="sendQuickPrompt('Bana havuzumdaki kelimeleri kullanarak yeni bir soru sor!')">🎯 Yeni soru sor</button>
+        <button class="chip-btn" onclick="sendQuickPrompt('Sen bir doktorsun/yetkilisin, ben hastayım/müşteriyim. Bir diyalog başlatalım.')">🩺 Rol Pratiği</button>
+      </div>
+
+      <div class="input-group">
+        <button id="mic-btn" class="mic-btn" onclick="toggleVoiceInput()" title="Almanca Konuş">🎙️</button>
+        <input type="text" id="chat-input" placeholder="Almanca veya Türkçe yaz..." onkeydown="if(event.key==='Enter') sendChatMessage()" style="margin-bottom:10px;" />
+        <button id="chat-send-btn" onclick="sendChatMessage()" style="width: auto; padding: 12px 20px; margin-bottom: 10px;">Gönder</button>
+      </div>
     </div>
   </div>
 
@@ -188,12 +223,15 @@
 
   <script>
     let words = [];
+    let chatMessages = [];
     let currentCardIdx = 0;
     let isFlipped = false;
     let currentStreak = 0;
     let currentWordObj = null;
     let activeFilter = 'all';
     let activeCardGroup = 'all';
+    let recognition = null;
+    let isRecording = false;
 
     const apiKeyInput = document.getElementById('api-key');
     const dbUrlInput = document.getElementById('db-url');
@@ -213,9 +251,10 @@
       document.getElementById(`tab-${tab}`).classList.add('active');
       btn.classList.add('active');
       if(tab === 'cards') loadCard();
+      if(tab === 'coach') scrollChatToBottom();
     }
 
-    // --- MÜKERRER KONTROLÜ İÇİN KELİME KÖKÜ TEMİZLEME ---
+    // --- MÜKERRER KONTROLÜ ---
     function normalizeWordKey(str) {
       if (!str) return '';
       return str.toLowerCase().replace(/^(der|die|das)\s+/i, '').trim();
@@ -226,7 +265,7 @@
       return words.some(w => normalizeWordKey(w.word) === key);
     }
 
-    // --- ALMANCA KELİME SINIFLANDIRMA VE NORMALLEŞTİRME ---
+    // --- ALMANCA KELİME SINIFLANDIRMA ---
     function sanitizeAndClassifyWord(item) {
       let word = (item.word || '').trim();
       let art = (item.article || '').toLowerCase().trim();
@@ -262,9 +301,7 @@
         art = '';
       }
 
-      if (!['Nomen', 'Verb', 'Adjektiv', 'Andere'].includes(type)) {
-        type = 'Andere';
-      }
+      if (!['Nomen', 'Verb', 'Adjektiv', 'Andere'].includes(type)) type = 'Andere';
 
       item.word = word;
       item.article = art;
@@ -272,13 +309,13 @@
       return item;
     }
 
-    // --- SES MOTORU ---
+    // --- SES MOTORU (TTS & STT) ---
     function playAudio(text) {
       if (!text || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'de-DE';
-      utterance.rate = 0.85;
+      utterance.rate = 0.88;
       
       const voices = window.speechSynthesis.getVoices();
       const deVoice = voices.find(v => v.lang && v.lang.startsWith('de'));
@@ -295,19 +332,64 @@
       if (currentWordObj && currentWordObj.example) playAudio(currentWordObj.example);
     }
 
-    // --- BULUT (FIREBASE) ---
+    // Mikrofonla Ses Tanıma (Speaking Pratiği)
+    function setupVoiceInput() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) return;
+      recognition = new SpeechRec();
+      recognition.lang = 'de-DE';
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        isRecording = true;
+        document.getElementById('mic-btn').classList.add('recording');
+      };
+
+      recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript;
+        const input = document.getElementById('chat-input');
+        input.value = (input.value ? input.value + ' ' : '') + transcript;
+      };
+
+      recognition.onend = () => {
+        isRecording = false;
+        document.getElementById('mic-btn').classList.remove('recording');
+      };
+
+      recognition.onerror = () => {
+        isRecording = false;
+        document.getElementById('mic-btn').classList.remove('recording');
+      };
+    }
+
+    function toggleVoiceInput() {
+      if (!recognition) {
+        alert("Tarayıcınız ses tanımayı desteklemiyor veya izin verilmedi.");
+        return;
+      }
+      if (isRecording) {
+        recognition.stop();
+      } else {
+        recognition.start();
+      }
+    }
+
+    // --- BULUT (FIREBASE) SENKRONİZASYONU ---
     async function syncWithFirebase() {
-      const localData = localStorage.getItem('wm_words');
-      if (localData) {
-        try { 
-          words = JSON.parse(localData).map(sanitizeAndClassifyWord); 
-          renderWords(); 
-        } catch(e) {}
+      // 1. Yerel verileri yükle
+      const localWords = localStorage.getItem('wm_words');
+      if (localWords) {
+        try { words = JSON.parse(localWords).map(sanitizeAndClassifyWord); renderWords(); } catch(e) {}
+      }
+      const localChat = localStorage.getItem('wm_chat');
+      if (localChat) {
+        try { chatMessages = JSON.parse(localChat); renderChatMessages(); } catch(e) {}
       }
 
       const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
       if(!dbUrl) return;
 
+      // 2. Buluttan kelimeleri çek
       try {
         const res = await fetch(`${dbUrl}/words.json`);
         const data = await res.json();
@@ -316,6 +398,17 @@
           words = raw.map(sanitizeAndClassifyWord);
           localStorage.setItem('wm_words', JSON.stringify(words));
           renderWords();
+        }
+      } catch(e) {}
+
+      // 3. Buluttan sohbeti çek
+      try {
+        const resChat = await fetch(`${dbUrl}/chat_messages.json`);
+        const dataChat = await resChat.json();
+        if(dataChat) {
+          chatMessages = Array.isArray(dataChat) ? dataChat : Object.values(dataChat);
+          localStorage.setItem('wm_chat', JSON.stringify(chatMessages));
+          renderChatMessages();
         }
       } catch(e) {}
     }
@@ -336,7 +429,22 @@
       }
     }
 
-    // --- HAVUZ TEMİZLEME & ONARMA ---
+    async function saveChatMessages() {
+      localStorage.setItem('wm_chat', JSON.stringify(chatMessages));
+      renderChatMessages();
+
+      const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
+      if(dbUrl) {
+        try {
+          await fetch(`${dbUrl}/chat_messages.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(chatMessages)
+          });
+        } catch(e) {}
+      }
+    }
+
     async function reclassifyAllWords() {
       if (words.length === 0) { alert("Havuzda kelime yok."); return; }
       words = words.map(sanitizeAndClassifyWord);
@@ -377,7 +485,7 @@
       saveWords();
     }
 
-    // --- GEMINI API ---
+    // --- GEMINI API ÇAĞRISI (HIZLANDIRILMIŞ) ---
     async function callGemini(partsArray, isJson = false) {
       const key = (localStorage.getItem('wm_api_key') || '').trim();
       if(!key) { alert("Lütfen Gemini API anahtarınızı girin!"); return null; }
@@ -704,30 +812,124 @@ JSON DİZİ (Array):
       }
     });
 
-    // --- CHATBOT ---
+    // --- WHATSAPP TARZI HIZLI CHATBOT SİSTEMİ ---
+    function renderChatMessages() {
+      const box = document.getElementById('chat-box');
+      if (chatMessages.length === 0) {
+        box.innerHTML = `
+          <div class="msg-wrapper bot">
+            <div class="msg bot">Hallo! 👋 Ben senin Almanca pratik koçunum. Kelime havuzuna tam hakimim. İster Almanca konuş, ister Türkçe sorular sor. Başlayalım mı?</div>
+          </div>
+        `;
+        return;
+      }
+
+      box.innerHTML = chatMessages.map((m, idx) => {
+        const isBot = m.role === 'model';
+        const speakerBtn = isBot ? `<button style="width:auto; padding:0; background:none; border:none; color:var(--accent); cursor:pointer; font-size:12px;" onclick="playAudio('${m.text.replace(/'/g, "\\'").replace(/\n/g, " ")}')">🔊 Dinle</button>` : '';
+        const timeStr = m.time || '';
+
+        return `
+          <div class="msg-wrapper ${isBot ? 'bot' : 'user'}">
+            <div class="msg ${isBot ? 'bot' : 'user'}">
+              ${m.text.replace(/\n/g, '<br>')}
+            </div>
+            <div class="msg-footer">
+              <span>${timeStr}</span>
+              ${speakerBtn}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      scrollChatToBottom();
+    }
+
+    function scrollChatToBottom() {
+      const box = document.getElementById('chat-box');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendQuickPrompt(promptText) {
+      document.getElementById('chat-input').value = promptText;
+      await sendChatMessage();
+    }
+
+    async function clearChatHistory() {
+      if (confirm("Tüm sohbet geçmişini silmek istediğinize emin misiniz?")) {
+        chatMessages = [];
+        await saveChatMessages();
+      }
+    }
+
     async function sendChatMessage() {
       const input = document.getElementById('chat-input');
       const text = input.value.trim();
       if(!text) return;
 
-      const chatBox = document.getElementById('chat-box');
-      chatBox.innerHTML += `<div class="msg user">${text}</div>`;
+      const key = (localStorage.getItem('wm_api_key') || '').trim();
+      if(!key) { alert("Lütfen Gemini API anahtarınızı girin!"); return; }
+
+      const sendBtn = document.getElementById('chat-send-btn');
+      sendBtn.disabled = true;
+      sendBtn.innerText = "Yazıyor...";
+
+      const now = new Date();
+      const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+      // Kullanıcı mesajını kaydet ve göster
+      chatMessages.push({ role: 'user', text: text, time: timeStr });
       input.value = '';
-      chatBox.scrollTop = chatBox.scrollHeight;
+      saveChatMessages();
 
-      const fullPrompt = `Sen kullanıcının kişisel Almanca koçusun.
-Kullanıcının kategorize edilmiş havuzu (İsimler, Fiiller, Sıfatlar, Bağlaçlar):
-${JSON.stringify(words)}
+      // HAFİF VE HIZLI MODEL BAĞLAMI
+      // 1. Son 20 kelimenin basit listesi
+      const sampleWords = words.slice(-25).map(w => w.word).join(', ');
 
-Kullanıcının mesajı: "${text}"
-Kullanıcıya seviyesine uygun, motive edici ve havuzundaki doğru kelime türlerine dikkat çekerek yanıt ver.`;
+      const systemPrompt = `Sen kullanıcının kişisel, samimi ve interaktif Almanca koçusun.
+Hedef seviye: A2-B1 seviyesi.
+Kullanıcının aktif kelime havuzundaki bazı önemli kelimeler: [${sampleWords}]
+
+GÖREVLERİN:
+1. Kullanıcı Almanca yazdığında bariz bir dilbilgisi/artikel/cümle hatası varsa, mesajının en başında nazikçe düzelt (Örn: "💡 Küçük bir not: '...' yerine '...' olmalı.").
+2. Ardından doğal, motive edici Almanca yanıt ver. Kullanıcıyı havuzundaki kelimeleri kullanmaya teşvik edecek açık uçlu sorular sor.
+3. Kullanıcı Türkçe soru sorarsa veya açıklama isterse net ve pedagojik şekilde açıkla.
+4. Yanıtlarını çok uzatma; sohbetin akıcı ve WhatsApp gibi dinamik kalmasını sağla.`;
+
+      // 2. Kayan Pencere: Sadece son 8-10 mesajı modele gönder (Yıldırım hızında yanıt için)
+      const recentHistory = chatMessages.slice(-10).map(m => ({
+        role: m.role,
+        parts: [{ text: m.text }]
+      }));
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${key}`;
+      const payload = {
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        contents: recentHistory
+      };
 
       try {
-        const reply = await callGemini([{ text: fullPrompt }], false);
-        chatBox.innerHTML += `<div class="msg bot">${reply}</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if(data.error) throw new Error(data.error.message);
+
+        const botReply = data.candidates[0].content.parts[0].text;
+        const botTime = new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0');
+
+        chatMessages.push({ role: 'model', text: botReply, time: botTime });
+        await saveChatMessages();
       } catch(e) {
-        chatBox.innerHTML += `<div class="msg bot">Hata: ${e.message}</div>`;
+        chatMessages.push({ role: 'model', text: "Hata oluştu: " + e.message, time: timeStr });
+        renderChatMessages();
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerText = "Gönder";
       }
     }
 
@@ -735,7 +937,10 @@ Kullanıcıya seviyesine uygun, motive edici ve havuzundaki doğru kelime türle
       window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     }
 
-    window.onload = syncWithFirebase;
+    window.onload = () => {
+      setupVoiceInput();
+      syncWithFirebase();
+    };
   </script>
 </body>
 </html>
