@@ -21,7 +21,7 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     
-    input, textarea, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 10px; font-size: 15px; }
+    input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 10px; font-size: 15px; }
     button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px; }
     .btn-secondary { background: #334155; color: white; }
     
@@ -54,34 +54,28 @@
   </header>
 
   <div class="container">
-    <!-- 1. SEKME: KELİMELERİM VE TOPLU EKLEME -->
     <div id="tab-words" class="tab-content active">
-      
-      <!-- Ayarlar (API & Firebase) -->
-      <details style="margin-bottom: 15px; background: #1e293b; padding: 10px; border-radius: 8px;">
+      <details style="margin-bottom: 15px; background: #1e293b; padding: 10px; border-radius: 8px;" open>
         <summary style="cursor:pointer; color: #94a3b8; font-size: 14px;">⚙️ Bağlantı & Bulut Ayarları</summary>
         <div style="margin-top: 10px;">
           <input type="text" id="api-key" placeholder="Gemini API Anahtarı" />
           <input type="text" id="db-url" placeholder="Firebase DB URL (https://...firebasedatabase.app)" />
-          <p style="font-size:11px; color:#94a3b8;">Firebase URL'sini girerseniz tüm cihazlarınız (Laptop & iPhone) anlık eşitlenir.</p>
+          <p style="font-size:11px; color:#94a3b8;">Firebase URL'sini girdiğinizde laptop ve iPhone anında eşitlenir.</p>
         </div>
       </details>
 
-      <!-- Tek Kelime Ekleme -->
       <div class="section-box">
         <div class="section-title">Tek Kelime Ekle</div>
         <input type="text" id="new-word" placeholder="Örn: Arzt veya die Gesundheit" />
         <button id="add-btn" onclick="addSingleWord()">Gemini ile Ekle</button>
       </div>
 
-      <!-- Toplu Metin / Liste Ekleme -->
       <div class="section-box">
         <div class="section-title">Toplu Kelime Listesi / Paragraf Yapıştır</div>
-        <textarea id="bulk-text" rows="3" placeholder="Alt alta kelimeler veya bir Almanca paragraf yapıştır..."></textarea>
+        <textarea id="bulk-text" rows="3" placeholder="Alt alta kelimeler veya bir paragraf yapıştır..."></textarea>
         <button id="bulk-btn" class="btn-secondary" onclick="addBulkWords()">Toplu Listeyi Çöz ve Ekle</button>
       </div>
 
-      <!-- Fotoğraftan / Kitaptan Ekleme (OCR) -->
       <div class="section-box">
         <div class="section-title">Kitaptan / Notlardan Fotoğraf Yükle</div>
         <input type="file" id="ocr-image" accept="image/*" />
@@ -94,7 +88,6 @@
       <div id="word-list"></div>
     </div>
 
-    <!-- 2. SEKME: FLASHCARD (KART TEKRARI) -->
     <div id="tab-cards" class="tab-content">
       <div class="flashcard-box" onclick="flipCard()">
         <div class="flashcard" id="active-card">
@@ -108,7 +101,6 @@
       </div>
     </div>
 
-    <!-- 3. SEKME: ALMANCA KOÇU (CHATBOT) -->
     <div id="tab-coach" class="tab-content">
       <div class="chat-box" id="chat-box">
         <div class="msg bot">Hallo! Eklediğin tüm kelimelere ve kart başarı durumuna hakimim. Pratik yapalım mı?</div>
@@ -118,7 +110,6 @@
     </div>
   </div>
 
-  <!-- ALT MENÜ -->
   <div class="nav">
     <button class="nav-btn active" onclick="switchTab('words', this)">Kelimeler</button>
     <button class="nav-btn" onclick="switchTab('cards', this)">Kart Tekrarı</button>
@@ -130,7 +121,6 @@
     let currentCardIdx = 0;
     let isFlipped = false;
 
-    // Ayarları Yükleme & Kaydetme
     const apiKeyInput = document.getElementById('api-key');
     const dbUrlInput = document.getElementById('db-url');
 
@@ -151,25 +141,26 @@
       if(tab === 'cards') loadCard();
     }
 
-    // --- BULUT (FIREBASE) SENKRONİZASYONU ---
     async function syncWithFirebase() {
-      const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
-      if(!dbUrl) {
-        words = JSON.parse(localStorage.getItem('wm_words') || '[]');
-        renderWords();
-        return;
+      const localData = localStorage.getItem('wm_words');
+      if (localData) {
+        try {
+          words = JSON.parse(localData);
+          renderWords();
+        } catch(e) {}
       }
+
+      const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
+      if(!dbUrl) return;
 
       try {
         const res = await fetch(`${dbUrl}/words.json`);
         const data = await res.json();
         if(data) {
           words = Array.isArray(data) ? data : Object.values(data);
-        } else {
-          words = [];
+          localStorage.setItem('wm_words', JSON.stringify(words));
+          renderWords();
         }
-        localStorage.setItem('wm_words', JSON.stringify(words));
-        renderWords();
       } catch(e) {
         console.error("Bulut senkronizasyon hatası:", e);
       }
@@ -193,7 +184,6 @@
       }
     }
 
-    // --- GEMINI API ÇAĞRISI ---
     async function callGemini(partsArray, isJson = false) {
       const key = (localStorage.getItem('wm_api_key') || '').trim();
       if(!key) { alert("Lütfen Gemini API anahtarınızı girin!"); return null; }
@@ -215,7 +205,6 @@
       return data.candidates[0].content.parts[0].text;
     }
 
-    // --- 1. TEK KELİME EKLEME ---
     async function addSingleWord() {
       const input = document.getElementById('new-word');
       const btn = document.getElementById('add-btn');
@@ -254,7 +243,6 @@ JSON formatında tam olarak şu yapıda döndür:
       }
     }
 
-    // --- 2. TOPLU KELİME / METİN EKLEME ---
     async function addBulkWords() {
       const input = document.getElementById('bulk-text');
       const btn = document.getElementById('bulk-btn');
@@ -267,7 +255,7 @@ JSON formatında tam olarak şu yapıda döndür:
       const prompt = `Aşağıdaki metindeki/listedeki tüm Almanca önemli kelimeleri tek tek ayıkla ve analiz et:
 """${text}"""
 
-Şu JSON şemasına sahip bir DİZİ (Array) döndür:
+Şu JSON şemasına sahip bir DİZİ döndür:
 [
   {
     "word": "artikeli ile tam hali (örn: das Krankenhaus)",
@@ -299,7 +287,6 @@ JSON formatında tam olarak şu yapıda döndür:
       }
     }
 
-    // --- 3. FOTOĞRAFTAN KELİME OKUMA (OCR) ---
     async function processImageOCR() {
       const fileInput = document.getElementById('ocr-image');
       const btn = document.getElementById('ocr-btn');
@@ -358,7 +345,6 @@ JSON formatında tam olarak şu yapıda döndür:
       reader.readAsDataURL(file);
     }
 
-    // --- KELİME LİSTELEME & SİLME ---
     function renderWords() {
       document.getElementById('word-count').innerText = words.length;
       const list = document.getElementById('word-list');
@@ -377,7 +363,6 @@ JSON formatında tam olarak şu yapıda döndür:
       await saveWords();
     }
 
-    // --- FLASHCARD ---
     function loadCard() {
       if(words.length === 0) {
         document.getElementById('card-front').innerText = "Havuzda kelime yok";
@@ -412,7 +397,6 @@ JSON formatında tam olarak şu yapıda döndür:
       loadCard();
     }
 
-    // --- CHATBOT ---
     async function sendChatMessage() {
       const input = document.getElementById('chat-input');
       const text = input.value.trim();
@@ -439,8 +423,7 @@ Kullanıcıya samimi, motive edici, kelime havuzundaki kelimeleri referans alara
       }
     }
 
-    // Sayfa açılışında senkronize et
-    syncWithFirebase();
+    window.onload = syncWithFirebase;
   </script>
 </body>
 </html>
