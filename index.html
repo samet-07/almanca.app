@@ -29,18 +29,16 @@
     .section-box { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; }
     .section-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; color: var(--accent); }
 
-    .word-card { background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid var(--accent); position: relative; }
+    .word-card { background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #64748b; position: relative; }
     .word-card.der { border-left-color: var(--der); }
     .word-card.die { border-left-color: var(--die); }
     .word-card.das { border-left-color: var(--das); }
     .del-btn { position: absolute; right: 10px; top: 10px; background: none; border: none; color: #ef4444; font-size: 14px; width: auto; padding: 0; cursor: pointer; }
     
-    /* Ses & Dinleme Butonları */
     .audio-btn { width: auto !important; display: inline-flex !important; align-items: center; gap: 5px; background: #334155 !important; color: white !important; padding: 6px 14px !important; font-size: 13px !important; border-radius: 20px !important; margin: 5px 0 !important; cursor: pointer; }
     .audio-btn:hover { background: var(--accent) !important; color: #0f172a !important; }
     .audio-btn-mini { width: auto !important; display: inline-flex !important; align-items: center; background: #334155 !important; color: white !important; padding: 3px 8px !important; font-size: 11px !important; border-radius: 6px !important; margin-left: 8px !important; vertical-align: middle; }
 
-    /* Flashcard & İlerleme */
     .progress-bar-container { background: #334155; border-radius: 8px; height: 10px; width: 100%; margin-bottom: 15px; overflow: hidden; }
     .progress-bar { background: var(--accent); height: 100%; width: 0%; transition: width 0.3s; }
     .stats-badge { display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; margin-bottom: 10px; }
@@ -52,7 +50,8 @@
     .btn-die { background: var(--die); color: white; }
     .btn-das { background: var(--das); color: white; }
 
-    /* Chat */
+    .word-type-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #334155; color: #94a3b8; margin-left: 6px; text-transform: uppercase; }
+
     .chat-box { height: 380px; overflow-y: auto; background: #0b1120; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
     .msg { padding: 10px 14px; border-radius: 8px; max-width: 80%; font-size: 14px; line-height: 1.4; }
     .msg.user { background: var(--accent); color: #0f172a; align-self: flex-end; }
@@ -81,8 +80,8 @@
       </details>
 
       <div class="section-box">
-        <div class="section-title">Tek Kelime Ekle</div>
-        <input type="text" id="new-word" placeholder="Örn: Arzt veya die Gesundheit" />
+        <div class="section-title">Tek Kelime Ekle (İsim, Fiil veya Sıfat)</div>
+        <input type="text" id="new-word" placeholder="Örn: trinken, Arzt, schnell" />
         <button id="add-btn" onclick="addSingleWord()">Gemini ile Ekle</button>
       </div>
 
@@ -115,6 +114,7 @@
       </div>
 
       <div class="flashcard">
+        <span id="card-type-badge" class="word-type-tag" style="margin-bottom:8px;"></span>
         <h2 id="card-word" style="margin-bottom: 10px;">Kelime Yok</h2>
         <button class="audio-btn" id="front-audio-btn" onclick="speakCurrentWord()">🔊 Telaffuzu Dinle (R)</button>
 
@@ -126,7 +126,8 @@
         </div>
       </div>
 
-      <div id="article-guess-section" class="article-buttons">
+      <!-- Artikel Butonları (Sadece İsimlerde Görünür) -->
+      <div id="article-guess-section" class="article-buttons" style="display:none;">
         <button class="btn-der" onclick="guessArticle('der')">der (1)</button>
         <button class="btn-die" onclick="guessArticle('die')">die (2)</button>
         <button class="btn-das" onclick="guessArticle('das')">das (3)</button>
@@ -137,13 +138,13 @@
         <button style="background: #ef4444; color:white;" onclick="answerCard(false)">Tekrar Et</button>
         <button style="background: #10b981; color:white;" onclick="answerCard(true)">Biliyorum</button>
       </div>
-      <p style="text-align:center; font-size:12px; color:#64748b; margin-top:5px;">Kısayollar: 1: der | 2: die | 3: das | R: Sesi Dinle | Boşluk: Çevir</p>
+      <p id="shortcuts-info" style="text-align:center; font-size:12px; color:#64748b; margin-top:5px;">Kısayollar: Boşluk: Çevir | R: Sesi Dinle</p>
     </div>
 
     <!-- 3. SEKME: CHATBOT -->
     <div id="tab-coach" class="tab-content">
       <div class="chat-box" id="chat-box">
-        <div class="msg bot">Hallo! Eklediğin tüm kelimelere, kart telaffuzlarına ve başarı durumuna hakimim. Pratik yapalım mı?</div>
+        <div class="msg bot">Hallo! Eklediğin tüm kelimelere, fiillere ve telaffuzlara hakimim. Nasıl çalışmak istersin?</div>
       </div>
       <input type="text" id="chat-input" placeholder="Koça mesaj yaz..." />
       <button onclick="sendChatMessage()">Gönder</button>
@@ -183,7 +184,7 @@
       if(tab === 'cards') loadCard();
     }
 
-    // --- ALMANCA TELAFFUZ MOTORU ---
+    // --- SES MOTORU ---
     function playAudio(text) {
       if (!text || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
@@ -199,15 +200,11 @@
     }
 
     function speakCurrentWord() {
-      if (currentWordObj && currentWordObj.word) {
-        playAudio(currentWordObj.word);
-      }
+      if (currentWordObj && currentWordObj.word) playAudio(currentWordObj.word);
     }
 
     function speakCurrentSentence() {
-      if (currentWordObj && currentWordObj.example) {
-        playAudio(currentWordObj.example);
-      }
+      if (currentWordObj && currentWordObj.example) playAudio(currentWordObj.example);
     }
 
     // --- BULUT (FIREBASE) ---
@@ -275,12 +272,15 @@
       btn.innerText = "Gemini Hazırlıyor...";
       btn.disabled = true;
 
-      const prompt = `Şu kelimeyi analiz et: "${text}". 
-JSON formatında döndür:
+      const prompt = `Şu Almanca kelimeyi analiz et: "${text}".
+Kelime türünü (Nomen, Verb, Adjektiv, vb.) doğru belirle.
+Eğer bir isim (Nomen) ise artikeli (der/die/das) ekle. Fiil (Verb) veya sıfatsa article kısmı BOŞ olsun, kesinlikle artikel uydurma.
+JSON formatında tam olarak şu alanları döndür:
 {
-  "word": "artikeli ile tam hali (örn: der Termin)",
-  "article": "der, die veya das",
-  "plural": "çoğul hali",
+  "word": "Kelimenin tam hali (örn: der Termin veya fiil ise trinken)",
+  "type": "Nomen | Verb | Adjektiv | Andere",
+  "article": "der, die veya das (sadece isimse, fiil/sıfatta boş bırak)",
+  "plural": "çoğul hali (fiil ise boş bırak)",
   "tr": "Türkçe karşılığı",
   "example": "A2-B1 seviyesinde örnek cümle",
   "example_tr": "cümle Türkçe çevirisi"
@@ -310,9 +310,11 @@ JSON formatında döndür:
       btn.innerText = "Kelimeler Çözümleniyor...";
       btn.disabled = true;
 
-      const prompt = `Şu metindeki tüm Almanca kelimeleri ayıkla ve JSON DİZİ (Array) olarak döndür:
+      const prompt = `Şu metindeki tüm Almanca önemli kelimeleri ayıkla ve analiz et:
 """${text}"""
-[{"word": "artikelli hali", "article": "der/die/das", "plural": "çoğulu", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
+Fiillere kesinlikle artikel verme, sadece isimlere der/die/das ver.
+JSON DİZİ (Array) döndür:
+[{"word": "kelime", "type": "Nomen/Verb/Adjektiv", "article": "der/die/das veya boş", "plural": "çoğulu", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
 
       try {
         const resText = await callGemini([{ text: prompt }], true);
@@ -341,8 +343,8 @@ JSON formatında döndür:
       const reader = new FileReader();
       reader.onload = async () => {
         const base64Data = reader.result.split(',')[1];
-        const prompt = `Fotoğraftaki Almanca kelimeleri JSON dizisi olarak döndür:
-[{"word": "artikelli hali", "article": "der/die/das", "plural": "çoğulu", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
+        const prompt = `Fotoğraftaki Almanca kelimeleri JSON dizisi olarak döndür (fiillere artikel verme):
+[{"word": "kelime", "type": "Nomen/Verb/Adjektiv", "article": "der/die/das veya boş", "plural": "çoğulu", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
         try {
           const resText = await callGemini([{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }], true);
           const items = JSON.parse(resText);
@@ -363,14 +365,17 @@ JSON formatında döndür:
     function renderWords() {
       document.getElementById('word-count').innerText = words.length;
       const list = document.getElementById('word-list');
-      list.innerHTML = words.map((w, index) => `
+      list.innerHTML = words.map((w, index) => {
+        const typeBadge = w.type ? `<span class="word-type-tag">${w.type}</span>` : '';
+        const pluralText = w.plural ? ` (${w.plural})` : '';
+        return `
         <div class="word-card ${w.article || ''}">
           <button class="del-btn" onclick="deleteWord(${index})">Sil</button>
-          <strong>${w.word}</strong> (${w.plural || '-'}) - <em>${w.tr}</em>
+          <strong>${w.word}</strong>${pluralText} ${typeBadge} - <em>${w.tr}</em>
           <button class="audio-btn-mini" onclick="playAudio('${w.word.replace(/'/g, "\\'")}')">🔊 Dinle</button><br>
           <small style="color:#94a3b8;">${w.example || ''} — <em>${w.example_tr || ''}</em></small>
         </div>
-      `).reverse().join('');
+      `}).reverse().join('');
     }
 
     async function deleteWord(index) {
@@ -383,7 +388,9 @@ JSON formatında döndür:
     function loadCard() {
       if(words.length === 0) {
         document.getElementById('card-word').innerText = "Havuzda kelime yok";
+        document.getElementById('card-type-badge').innerText = "";
         document.getElementById('front-audio-btn').style.display = 'none';
+        document.getElementById('article-guess-section').style.display = 'none';
         document.getElementById('card-back-box').style.display = 'none';
         document.getElementById('card-index-stat').innerText = "0/0";
         document.getElementById('progress-bar').style.width = "0%";
@@ -397,15 +404,28 @@ JSON formatında döndür:
       document.getElementById('progress-bar').style.width = `${((currentIdx + 1) / words.length) * 100}%`;
       document.getElementById('streak-stat').innerText = `${currentStreak} 🔥`;
 
-      let displayWord = currentWordObj.word;
-      if(currentWordObj.article && ['der', 'die', 'das'].includes(currentWordObj.article)) {
-        displayWord = `... ${currentWordObj.word.replace(/^(der|die|das)\s+/i, '')}`;
+      const hasArticle = currentWordObj.article && ['der', 'die', 'das'].includes(currentWordObj.article.toLowerCase().trim());
+
+      document.getElementById('card-type-badge').innerText = currentWordObj.type || (hasArticle ? 'Nomen' : 'Wort');
+
+      if(hasArticle) {
+        // İsim ise artikeli gizle ve butonları göster
+        const cleanNoun = currentWordObj.word.replace(/^(der|die|das)\s+/i, '');
+        document.getElementById('card-word').innerText = `... ${cleanNoun}`;
+        document.getElementById('article-guess-section').style.display = 'grid';
+        document.getElementById('shortcuts-info').innerText = "Kısayollar: 1: der | 2: die | 3: das | Boşluk: Çevir | R: Dinle";
+      } else {
+        // Fiil veya sıfatsa tam kelimeyi göster, artikel butonlarını gizle
+        document.getElementById('card-word').innerText = currentWordObj.word;
+        document.getElementById('article-guess-section').style.display = 'none';
+        document.getElementById('shortcuts-info').innerText = "Kısayollar: Boşluk: Kartı Çevir | R: Sesi Dinle";
       }
 
-      document.getElementById('card-word').innerText = displayWord;
       document.getElementById('front-audio-btn').style.display = 'inline-flex';
       document.getElementById('card-back-box').style.display = 'none';
-      document.getElementById('card-tr').innerText = `${currentWordObj.word} (${currentWordObj.plural || '-'}) = ${currentWordObj.tr}`;
+      
+      const pluralInfo = currentWordObj.plural ? ` (${currentWordObj.plural})` : '';
+      document.getElementById('card-tr').innerText = `${currentWordObj.word}${pluralInfo} = ${currentWordObj.tr}`;
       document.getElementById('card-example').innerText = currentWordObj.example || '';
       document.getElementById('card-example-tr').innerText = currentWordObj.example_tr || '';
     }
@@ -446,9 +466,14 @@ JSON formatında döndür:
       if(!activeTab || ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
       if(e.code === 'Space') { e.preventDefault(); flipCard(); }
-      if(e.key === '1') guessArticle('der');
-      if(e.key === '2') guessArticle('die');
-      if(e.key === '3') guessArticle('das');
+      
+      const hasArticle = currentWordObj && currentWordObj.article && ['der', 'die', 'das'].includes(currentWordObj.article.toLowerCase().trim());
+      if(hasArticle) {
+        if(e.key === '1') guessArticle('der');
+        if(e.key === '2') guessArticle('die');
+        if(e.key === '3') guessArticle('das');
+      }
+      
       if(e.key.toLowerCase() === 'r') {
         if(isFlipped) speakCurrentSentence(); else speakCurrentWord();
       }
@@ -465,7 +490,7 @@ JSON formatında döndür:
       chatBox.scrollTop = chatBox.scrollHeight;
 
       const fullPrompt = `Sen kullanıcının kişisel Almanca koçusun.
-Kullanıcının kelime havuzu:
+Kullanıcının kelime ve fiil havuzu:
 ${JSON.stringify(words)}
 
 Kullanıcının mesajı: "${text}"
