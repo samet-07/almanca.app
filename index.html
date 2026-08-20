@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WortMeister - Almanca Kelime & Koç</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --accent: #38bdf8;
+      --der: #3b82f6;
+      --die: #ef4444;
+      --das: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 70px; }
+    header { padding: 15px; text-align: center; background: var(--card); border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10; }
+    .container { padding: 15px; max-width: 500px; margin: auto; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    /* Input & Button */
+    input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 10px; font-size: 16px; }
+    button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; font-size: 16px; cursor: pointer; }
+    
+    /* Kelime Kartları Listesi */
+    .word-card { background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid var(--accent); }
+    .word-card.der { border-left-color: var(--der); }
+    .word-card.die { border-left-color: var(--die); }
+    .word-card.das { border-left-color: var(--das); }
+    
+    /* Flashcard */
+    .flashcard-box { perspective: 1000px; margin: 20px 0; }
+    .flashcard { background: var(--card); height: 220px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; cursor: pointer; transition: transform 0.3s; }
+    
+    /* Chat */
+    .chat-box { height: 350px; overflow-y: auto; background: #0b1120; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .msg { padding: 8px 12px; border-radius: 8px; max-width: 80%; font-size: 14px; }
+    .msg.user { background: var(--accent); color: #0f172a; align-self: flex-end; }
+    .msg.bot { background: var(--card); align-self: flex-start; }
+
+    /* Alt Menü */
+    .nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card); display: flex; border-top: 1px solid #334155; }
+    .nav-btn { flex: 1; border: none; background: none; color: #94a3b8; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .nav-btn.active { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2 id="app-title">WortMeister</h2>
+  </header>
+
+  <div class="container">
+    <!-- 1. SEKME: KELİMELERİM -->
+    <div id="tab-words" class="tab-content active">
+      <input type="text" id="api-key" placeholder="Gemini API Anahtarını Gir (1 kez)" />
+      <input type="text" id="new-word" placeholder="Yeni Almanca Kelime (Örn: Termin)" />
+      <button onclick="addWord()">Kelimeyi Gemini ile Çöz ve Ekle</button>
+      <div id="word-list" style="margin-top: 20px;"></div>
+    </div>
+
+    <!-- 2. SEKME: FLASHCARD (KART TEKRARI) -->
+    <div id="tab-cards" class="tab-content">
+      <div class="flashcard-box" onclick="flipCard()">
+        <div class="flashcard" id="active-card">
+          <h3 id="card-front">Kelime Yok</h3>
+          <p id="card-back" style="display:none; margin-top:10px; color:#94a3b8;"></p>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button style="background: #ef4444; color:white;" onclick="answerCard(false)">Tekrar Et</button>
+        <button style="background: #10b981; color:white;" onclick="answerCard(true)">Biliyorum</button>
+      </div>
+    </div>
+
+    <!-- 3. SEKME: ALMANCA KOÇU (CHATBOT) -->
+    <div id="tab-coach" class="tab-content">
+      <div class="chat-box" id="chat-box">
+        <div class="msg bot">Hallo! Ben senin kişisel Almanca koçunum. Eklediğin kelimelere ve kart sonuçlarına tam olarak hakimim. Nasıl çalışmak istersin?</div>
+      </div>
+      <input type="text" id="chat-input" placeholder="Koça mesaj yaz..." />
+      <button onclick="sendChatMessage()">Gönder</button>
+    </div>
+  </div>
+
+  <!-- ALT MENÜ -->
+  <div class="nav">
+    <button class="nav-btn active" onclick="switchTab('words', this)">Kelimeler</button>
+    <button class="nav-btn" onclick="switchTab('cards', this)">Kart Tekrarı</button>
+    <button class="nav-btn" onclick="switchTab('coach', this)">Almanca Koçu</button>
+  </div>
+
+  <script>
+    let words = JSON.parse(localStorage.getItem('wm_words') || '[]');
+    let currentCardIdx = 0;
+    let isFlipped = false;
+
+    // API Key Kaydetme
+    const apiKeyInput = document.getElementById('api-key');
+    apiKeyInput.value = localStorage.getItem('wm_api_key') || '';
+    apiKeyInput.onchange = () => localStorage.setItem('wm_api_key', apiKeyInput.value.trim());
+
+    function getApiKey() {
+      return localStorage.getItem('wm_api_key') || '';
+    }
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      btn.classList.add('active');
+      if(tab === 'cards') loadCard();
+    }
+
+    // Gemini API Çağrısı
+    async function callGemini(prompt, systemInstruction = "") {
+      const key = getApiKey();
+      if(!key) { alert("Lütfen önce API anahtarınızı girin!"); return null; }
+      
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }]
+      };
+      if(systemInstruction) {
+        payload.systemInstruction = { parts: [{ text: systemInstruction }] };
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      return data.candidates[0].content.parts[0].text;
+    }
+
+    // Kelime Ekleme (Gemini ile Otomatik)
+    async function addWord() {
+      const wordInput = document.getElementById('new-word');
+      const rawWord = wordInput.value.trim();
+      if(!rawWord) return;
+
+      wordInput.value = "Gemini hazırlıyor...";
+      const prompt = `Şu Almanca kelimeyi analiz et: "${rawWord}". 
+JSON formatında tam olarak şu alanları döndür:
+{"word": "artikeli ile tam hali (örn: der Termin)", "article": "der/die/das veya yok", "plural": "çoğul hali", "tr": "Türkçe karşılığı", "example": "A2-B1 seviyesinde örnek Almanca cümle", "example_tr": "cümle Türkçe çevirisi"}`;
+
+      try {
+        const res = await callGemini(prompt, "Sadece saf JSON formatında cevap ver.");
+        const cleanJson = res.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(cleanJson);
+        parsed.status = 'new'; // 'known', 'learning'
+        parsed.wrongCount = 0;
+        parsed.correctCount = 0;
+
+        words.push(parsed);
+        localStorage.setItem('wm_words', JSON.stringify(words));
+        wordInput.value = '';
+        renderWords();
+      } catch(e) {
+        alert("Kelime çözümlenirken hata oluştu.");
+        wordInput.value = rawWord;
+      }
+    }
+
+    function renderWords() {
+      const list = document.getElementById('word-list');
+      list.innerHTML = words.map(w => `
+        <div class="word-card ${w.article}">
+          <strong>${w.word}</strong> (${w.plural || '-'}) - <em>${w.tr}</em><br>
+          <small style="color:#94a3b8;">${w.example || ''}</small>
+        </div>
+      `).reverse().join('');
+    }
+    renderWords();
+
+    // Kart Mantığı
+    function loadCard() {
+      if(words.length === 0) return;
+      isFlipped = false;
+      const w = words[currentCardIdx % words.length];
+      document.getElementById('card-front').innerText = w.word;
+      document.getElementById('card-back').style.display = 'none';
+      document.getElementById('card-back').innerHTML = `<strong>${w.tr}</strong><br><br>${w.example}<br><em>${w.example_tr}</em>`;
+    }
+
+    function flipCard() {
+      if(words.length === 0) return;
+      isFlipped = !isFlipped;
+      document.getElementById('card-back').style.display = isFlipped ? 'block' : 'none';
+    }
+
+    function answerCard(known) {
+      if(words.length === 0) return;
+      const w = words[currentCardIdx % words.length];
+      if(known) {
+        w.correctCount = (w.correctCount || 0) + 1;
+        w.status = 'known';
+      } else {
+        w.wrongCount = (w.wrongCount || 0) + 1;
+        w.status = 'learning';
+      }
+      localStorage.setItem('wm_words', JSON.stringify(words));
+      currentCardIdx++;
+      loadCard();
+    }
+
+    // Tüm Veriye Hakim Gemini Chatbot
+    async function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if(!text) return;
+
+      const chatBox = document.getElementById('chat-box');
+      chatBox.innerHTML += `<div class="msg user">${text}</div>`;
+      input.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      // Koça tüm veritabanını ve kullanıcının durumunu veriyoruz
+      const contextSystem = `Sen kullanıcının kişisel Almanca koçusun.
+Kullanıcının kelime havuzu ve çalışma istatistikleri aynen şöyledir:
+${JSON.stringify(words)}
+
+Kullanıcının sorduğu sorulara bu kelimeleri ve takıldığı noktaları referans alarak samimi, motive edici ve öğretici şekilde cevap ver.`;
+
+      try {
+        const reply = await callGemini(text, contextSystem);
+        chatBox.innerHTML += `<div class="msg bot">${reply}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } catch(e) {
+        chatBox.innerHTML += `<div class="msg bot">Üzgünüm, bir bağlantı hatası oluştu.</div>`;
+      }
+    }
+  </script>
+</body>
+</html>
