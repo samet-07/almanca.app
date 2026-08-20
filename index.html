@@ -15,25 +15,30 @@
       --das: #10b981;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding-bottom: 70px; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 80px; }
     header { padding: 15px; text-align: center; background: var(--card); border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10; }
     .container { padding: 15px; max-width: 500px; margin: auto; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     
-    input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 10px; font-size: 16px; }
-    button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; font-size: 16px; cursor: pointer; }
+    input, textarea, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 10px; font-size: 15px; }
+    button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px; }
+    .btn-secondary { background: #334155; color: white; }
     
-    .word-card { background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid var(--accent); }
+    .section-box { background: #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; }
+    .section-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; color: var(--accent); }
+
+    .word-card { background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid var(--accent); position: relative; }
     .word-card.der { border-left-color: var(--der); }
     .word-card.die { border-left-color: var(--die); }
     .word-card.das { border-left-color: var(--das); }
+    .del-btn { position: absolute; right: 10px; top: 10px; background: none; border: none; color: #ef4444; font-size: 14px; width: auto; padding: 0; cursor: pointer; }
     
     .flashcard-box { perspective: 1000px; margin: 20px 0; }
     .flashcard { background: var(--card); height: 220px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; cursor: pointer; }
     
     .chat-box { height: 350px; overflow-y: auto; background: #0b1120; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
-    .msg { padding: 8px 12px; border-radius: 8px; max-width: 80%; font-size: 14px; }
+    .msg { padding: 8px 12px; border-radius: 8px; max-width: 80%; font-size: 14px; line-height: 1.4; }
     .msg.user { background: var(--accent); color: #0f172a; align-self: flex-end; }
     .msg.bot { background: var(--card); align-self: flex-start; }
 
@@ -49,13 +54,47 @@
   </header>
 
   <div class="container">
+    <!-- 1. SEKME: KELİMELERİM VE TOPLU EKLEME -->
     <div id="tab-words" class="tab-content active">
-      <input type="text" id="api-key" placeholder="Gemini API Anahtarını Gir (AIza...)" />
-      <input type="text" id="new-word" placeholder="Yeni Almanca Kelime (Örn: Krankenhaus)" />
-      <button id="add-btn" onclick="addWord()">Kelimeyi Gemini ile Çöz ve Ekle</button>
-      <div id="word-list" style="margin-top: 20px;"></div>
+      
+      <!-- Ayarlar (API & Firebase) -->
+      <details style="margin-bottom: 15px; background: #1e293b; padding: 10px; border-radius: 8px;">
+        <summary style="cursor:pointer; color: #94a3b8; font-size: 14px;">⚙️ Bağlantı & Bulut Ayarları</summary>
+        <div style="margin-top: 10px;">
+          <input type="text" id="api-key" placeholder="Gemini API Anahtarı" />
+          <input type="text" id="db-url" placeholder="Firebase DB URL (https://...firebasedatabase.app)" />
+          <p style="font-size:11px; color:#94a3b8;">Firebase URL'sini girerseniz tüm cihazlarınız (Laptop & iPhone) anlık eşitlenir.</p>
+        </div>
+      </details>
+
+      <!-- Tek Kelime Ekleme -->
+      <div class="section-box">
+        <div class="section-title">Tek Kelime Ekle</div>
+        <input type="text" id="new-word" placeholder="Örn: Arzt veya die Gesundheit" />
+        <button id="add-btn" onclick="addSingleWord()">Gemini ile Ekle</button>
+      </div>
+
+      <!-- Toplu Metin / Liste Ekleme -->
+      <div class="section-box">
+        <div class="section-title">Toplu Kelime Listesi / Paragraf Yapıştır</div>
+        <textarea id="bulk-text" rows="3" placeholder="Alt alta kelimeler veya bir Almanca paragraf yapıştır..."></textarea>
+        <button id="bulk-btn" class="btn-secondary" onclick="addBulkWords()">Toplu Listeyi Çöz ve Ekle</button>
+      </div>
+
+      <!-- Fotoğraftan / Kitaptan Ekleme (OCR) -->
+      <div class="section-box">
+        <div class="section-title">Kitaptan / Notlardan Fotoğraf Yükle</div>
+        <input type="file" id="ocr-image" accept="image/*" />
+        <button id="ocr-btn" class="btn-secondary" onclick="processImageOCR()">Fotoğraftaki Kelimeleri Çıkar</button>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin: 15px 0 10px 0;">
+        <h3>Kelimelerim (<span id="word-count">0</span>)</h3>
+      </div>
+      <div id="word-list"></div>
     </div>
 
+    <!-- 2. SEKME: FLASHCARD (KART TEKRARI) -->
     <div id="tab-cards" class="tab-content">
       <div class="flashcard-box" onclick="flipCard()">
         <div class="flashcard" id="active-card">
@@ -69,15 +108,17 @@
       </div>
     </div>
 
+    <!-- 3. SEKME: ALMANCA KOÇU (CHATBOT) -->
     <div id="tab-coach" class="tab-content">
       <div class="chat-box" id="chat-box">
-        <div class="msg bot">Hallo! Eklediğin kelimelere ve kart sonuçlarına tam olarak hakimim. Ne çalışmak istersin?</div>
+        <div class="msg bot">Hallo! Eklediğin tüm kelimelere ve kart başarı durumuna hakimim. Pratik yapalım mı?</div>
       </div>
       <input type="text" id="chat-input" placeholder="Koça mesaj yaz..." />
       <button onclick="sendChatMessage()">Gönder</button>
     </div>
   </div>
 
+  <!-- ALT MENÜ -->
   <div class="nav">
     <button class="nav-btn active" onclick="switchTab('words', this)">Kelimeler</button>
     <button class="nav-btn" onclick="switchTab('cards', this)">Kart Tekrarı</button>
@@ -85,13 +126,22 @@
   </div>
 
   <script>
-    let words = JSON.parse(localStorage.getItem('wm_words') || '[]');
+    let words = [];
     let currentCardIdx = 0;
     let isFlipped = false;
 
+    // Ayarları Yükleme & Kaydetme
     const apiKeyInput = document.getElementById('api-key');
+    const dbUrlInput = document.getElementById('db-url');
+
     apiKeyInput.value = localStorage.getItem('wm_api_key') || '';
+    dbUrlInput.value = localStorage.getItem('wm_db_url') || '';
+
     apiKeyInput.oninput = () => localStorage.setItem('wm_api_key', apiKeyInput.value.trim());
+    dbUrlInput.oninput = () => {
+      localStorage.setItem('wm_db_url', dbUrlInput.value.trim());
+      syncWithFirebase();
+    };
 
     function switchTab(tab, btn) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -101,93 +151,236 @@
       if(tab === 'cards') loadCard();
     }
 
-    async function callGemini(promptText, isJson = false) {
-      const key = (localStorage.getItem('wm_api_key') || '').trim();
-      if(!key) { 
-        alert("Lütfen en üstteki kutuya geçerli Gemini API anahtarını girin!"); 
-        return null; 
+    // --- BULUT (FIREBASE) SENKRONİZASYONU ---
+    async function syncWithFirebase() {
+      const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
+      if(!dbUrl) {
+        words = JSON.parse(localStorage.getItem('wm_words') || '[]');
+        renderWords();
+        return;
       }
+
+      try {
+        const res = await fetch(`${dbUrl}/words.json`);
+        const data = await res.json();
+        if(data) {
+          words = Array.isArray(data) ? data : Object.values(data);
+        } else {
+          words = [];
+        }
+        localStorage.setItem('wm_words', JSON.stringify(words));
+        renderWords();
+      } catch(e) {
+        console.error("Bulut senkronizasyon hatası:", e);
+      }
+    }
+
+    async function saveWords() {
+      localStorage.setItem('wm_words', JSON.stringify(words));
+      renderWords();
+      
+      const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
+      if(dbUrl) {
+        try {
+          await fetch(`${dbUrl}/words.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(words)
+          });
+        } catch(e) {
+          console.error("Buluta kaydedilemedi:", e);
+        }
+      }
+    }
+
+    // --- GEMINI API ÇAĞRISI ---
+    async function callGemini(partsArray, isJson = false) {
+      const key = (localStorage.getItem('wm_api_key') || '').trim();
+      if(!key) { alert("Lütfen Gemini API anahtarınızı girin!"); return null; }
       
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${key}`;
-      
-      const bodyPayload = {
-        contents: [{ parts: [{ text: promptText }] }]
-      };
+      const payload = { contents: [{ parts: partsArray }] };
       
       if (isJson) {
-        bodyPayload.generationConfig = { responseMimeType: "application/json" };
+        payload.generationConfig = { responseMimeType: "application/json" };
       }
 
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyPayload)
+        body: JSON.stringify(payload)
       });
-
       const data = await res.json();
-      
-      if (data.error) {
-        throw new Error(data.error.message || "Google API Hatası");
-      }
-      
+      if(data.error) throw new Error(data.error.message);
       return data.candidates[0].content.parts[0].text;
     }
 
-    async function addWord() {
-      const wordInput = document.getElementById('new-word');
-      const addBtn = document.getElementById('add-btn');
-      const rawWord = wordInput.value.trim();
-      
-      if(!rawWord) return;
+    // --- 1. TEK KELİME EKLEME ---
+    async function addSingleWord() {
+      const input = document.getElementById('new-word');
+      const btn = document.getElementById('add-btn');
+      const text = input.value.trim();
+      if(!text) return;
 
-      addBtn.innerText = "Gemini hazırlıyor...";
-      addBtn.disabled = true;
+      btn.innerText = "Gemini Hazırlıyor...";
+      btn.disabled = true;
 
-      const prompt = `Şu Almanca kelimeyi analiz et: "${rawWord}". 
-Aşağıdaki JSON şemasına birebir uyarak saf JSON yanıt ver:
+      const prompt = `Şu kelimeyi analiz et: "${text}". 
+JSON formatında tam olarak şu yapıda döndür:
 {
   "word": "artikeli ile tam hali (örn: der Termin)",
-  "article": "der, die veya das (artikelsizse bos)",
+  "article": "der, die veya das (yoksa bos)",
   "plural": "çoğul hali",
   "tr": "Türkçe karşılığı",
-  "example": "A2-B1 seviyesinde örnek Almanca cümle",
+  "example": "A2-B1 seviyesinde örnek cümle",
   "example_tr": "cümle Türkçe çevirisi"
 }`;
 
       try {
-        const resText = await callGemini(prompt, true);
-        const parsed = JSON.parse(resText);
+        const resText = await callGemini([{ text: prompt }], true);
+        const item = JSON.parse(resText);
+        item.status = 'new';
+        item.wrongCount = 0;
+        item.correctCount = 0;
         
-        parsed.status = 'new';
-        parsed.wrongCount = 0;
-        parsed.correctCount = 0;
-
-        words.push(parsed);
-        localStorage.setItem('wm_words', JSON.stringify(words));
-        wordInput.value = '';
-        renderWords();
+        words.push(item);
+        await saveWords();
+        input.value = '';
       } catch(e) {
-        alert("Hata Detayı: " + e.message);
+        alert("Hata: " + e.message);
       } finally {
-        addBtn.innerText = "Kelimeyi Gemini ile Çöz ve Ekle";
-        addBtn.disabled = false;
+        btn.innerText = "Gemini ile Ekle";
+        btn.disabled = false;
       }
     }
 
+    // --- 2. TOPLU KELİME / METİN EKLEME ---
+    async function addBulkWords() {
+      const input = document.getElementById('bulk-text');
+      const btn = document.getElementById('bulk-btn');
+      const text = input.value.trim();
+      if(!text) return;
+
+      btn.innerText = "Kelimeler Çözümleniyor...";
+      btn.disabled = true;
+
+      const prompt = `Aşağıdaki metindeki/listedeki tüm Almanca önemli kelimeleri tek tek ayıkla ve analiz et:
+"""${text}"""
+
+Şu JSON şemasına sahip bir DİZİ (Array) döndür:
+[
+  {
+    "word": "artikeli ile tam hali (örn: das Krankenhaus)",
+    "article": "der, die veya das",
+    "plural": "çoğul hali",
+    "tr": "Türkçe karşılığı",
+    "example": "Örnek cümle",
+    "example_tr": "Örnek cümle Türkçe çevirisi"
+  }
+]`;
+
+      try {
+        const resText = await callGemini([{ text: prompt }], true);
+        const items = JSON.parse(resText);
+        items.forEach(it => {
+          it.status = 'new';
+          it.wrongCount = 0;
+          it.correctCount = 0;
+          words.push(it);
+        });
+        await saveWords();
+        input.value = '';
+        alert(`${items.length} adet kelime başarıyla eklendi!`);
+      } catch(e) {
+        alert("Toplu ekleme hatası: " + e.message);
+      } finally {
+        btn.innerText = "Toplu Listeyi Çöz ve Ekle";
+        btn.disabled = false;
+      }
+    }
+
+    // --- 3. FOTOĞRAFTAN KELİME OKUMA (OCR) ---
+    async function processImageOCR() {
+      const fileInput = document.getElementById('ocr-image');
+      const btn = document.getElementById('ocr-btn');
+      if(!fileInput.files || fileInput.files.length === 0) {
+        alert("Lütfen bir fotoğraf seçin!");
+        return;
+      }
+
+      btn.innerText = "Fotoğraf Analiz Ediliyor...";
+      btn.disabled = true;
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async () => {
+        const base64Data = reader.result.split(',')[1];
+        const mimeType = file.type;
+
+        const prompt = `Bu fotoğrafta görünen tüm Almanca kelimeleri / kelime listesini analiz et.
+Şu JSON formatında bir DİZİ döndür:
+[
+  {
+    "word": "artikeli ile tam hali (örn: der Tisch)",
+    "article": "der, die veya das",
+    "plural": "çoğul hali",
+    "tr": "Türkçe karşılığı",
+    "example": "Kısa örnek cümle",
+    "example_tr": "Cümlenin Türkçesi"
+  }
+]`;
+
+        try {
+          const resText = await callGemini([
+            { text: prompt },
+            { inlineData: { mimeType: mimeType, data: base64Data } }
+          ], true);
+
+          const items = JSON.parse(resText);
+          items.forEach(it => {
+            it.status = 'new';
+            it.wrongCount = 0;
+            it.correctCount = 0;
+            words.push(it);
+          });
+          await saveWords();
+          fileInput.value = '';
+          alert(`Fotoğraftan ${items.length} kelime başarıyla aktarıldı!`);
+        } catch(e) {
+          alert("OCR Hatası: " + e.message);
+        } finally {
+          btn.innerText = "Fotoğraftaki Kelimeleri Çıkar";
+          btn.disabled = false;
+        }
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    // --- KELİME LİSTELEME & SİLME ---
     function renderWords() {
+      document.getElementById('word-count').innerText = words.length;
       const list = document.getElementById('word-list');
-      list.innerHTML = words.map(w => `
+      list.innerHTML = words.map((w, index) => `
         <div class="word-card ${w.article || ''}">
+          <button class="del-btn" onclick="deleteWord(${index})">Sil</button>
           <strong>${w.word}</strong> (${w.plural || '-'}) - <em>${w.tr}</em><br>
           <small style="color:#94a3b8;">${w.example || ''} — <em>${w.example_tr || ''}</em></small>
         </div>
       `).reverse().join('');
     }
-    renderWords();
 
+    async function deleteWord(index) {
+      const realIndex = words.length - 1 - index;
+      words.splice(realIndex, 1);
+      await saveWords();
+    }
+
+    // --- FLASHCARD ---
     function loadCard() {
       if(words.length === 0) {
-        document.getElementById('card-front').innerText = "Henüz kelime eklenmedi";
+        document.getElementById('card-front').innerText = "Havuzda kelime yok";
         document.getElementById('card-back').style.display = 'none';
         return;
       }
@@ -204,7 +397,7 @@ Aşağıdaki JSON şemasına birebir uyarak saf JSON yanıt ver:
       document.getElementById('card-back').style.display = isFlipped ? 'block' : 'none';
     }
 
-    function answerCard(known) {
+    async function answerCard(known) {
       if(words.length === 0) return;
       const w = words[currentCardIdx % words.length];
       if(known) {
@@ -214,11 +407,12 @@ Aşağıdaki JSON şemasına birebir uyarak saf JSON yanıt ver:
         w.wrongCount = (w.wrongCount || 0) + 1;
         w.status = 'learning';
       }
-      localStorage.setItem('wm_words', JSON.stringify(words));
       currentCardIdx++;
+      await saveWords();
       loadCard();
     }
 
+    // --- CHATBOT ---
     async function sendChatMessage() {
       const input = document.getElementById('chat-input');
       const text = input.value.trim();
@@ -230,20 +424,23 @@ Aşağıdaki JSON şemasına birebir uyarak saf JSON yanıt ver:
       chatBox.scrollTop = chatBox.scrollHeight;
 
       const fullPrompt = `Sen kullanıcının kişisel Almanca koçusun.
-Kullanıcının kelime listesi ve kart başarı durumu:
+Kullanıcının güncel havuzundaki tüm kelimeler ve kart başarı durumları:
 ${JSON.stringify(words)}
 
 Kullanıcının mesajı: "${text}"
-Kullanıcıya samimi, motive edici, kelime havuzundaki kelimeleri ve seviyesini gözeterek Türkçe/Almanca yanıt ver.`;
+Kullanıcıya samimi, motive edici, kelime havuzundaki kelimeleri referans alarak yanıt ver.`;
 
       try {
-        const reply = await callGemini(fullPrompt, false);
+        const reply = await callGemini([{ text: fullPrompt }], false);
         chatBox.innerHTML += `<div class="msg bot">${reply}</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
       } catch(e) {
         chatBox.innerHTML += `<div class="msg bot">Hata: ${e.message}</div>`;
       }
     }
+
+    // Sayfa açılışında senkronize et
+    syncWithFirebase();
   </script>
 </body>
 </html>
