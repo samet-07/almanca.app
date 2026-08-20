@@ -3,944 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WortMeister - Almanca Kelime & Koç</title>
+  <title>WortMeister - Otonom Koç</title>
   <style>
-    :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --text: #f8fafc;
-      --accent: #38bdf8;
-      --der: #3b82f6;
-      --die: #ef4444;
-      --das: #10b981;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; --warn: #eab308; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
     body { background: var(--bg); color: var(--text); padding-bottom: 80px; }
-    header { padding: 15px; text-align: center; background: var(--card); border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10; }
     .container { padding: 20px; max-width: 650px; margin: auto; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    /* Otonom Paneli */
+    .auto-coach-panel { background: #1e3a8a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--accent); }
+    .status-pill { display: inline-block; padding: 4px 10px; border-radius: 15px; font-size: 11px; background: var(--warn); color: #000; font-weight: bold; }
     
-    input, textarea, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 10px; font-size: 15px; }
-    button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px; transition: opacity 0.2s; }
-    button:hover { opacity: 0.9; }
-    .btn-secondary { background: #334155; color: white; }
+    /* Mevcut Bileşenler */
+    .word-card { background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #64748b; }
+    .word-card.needs-review { border-left-color: var(--warn); }
     
-    .section-box { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; }
-    .section-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; color: var(--accent); }
-
-    /* Filtre Butonları (Pills) */
-    .filter-pills { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 4px; }
-    .pill { width: auto !important; background: #334155 !important; color: #94a3b8 !important; padding: 6px 14px !important; font-size: 13px !important; border-radius: 20px !important; margin-bottom: 0 !important; cursor: pointer; white-space: nowrap; }
-    .pill.active { background: var(--accent) !important; color: #0f172a !important; font-weight: bold; }
-
-    /* Kelime Kartı */
-    .word-card { background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #64748b; position: relative; }
-    .word-card.der { border-left-color: var(--der); }
-    .word-card.die { border-left-color: var(--die); }
-    .word-card.das { border-left-color: var(--das); }
-    .del-btn { position: absolute; right: 10px; top: 10px; background: none; border: none; color: #ef4444; font-size: 14px; width: auto; padding: 0; cursor: pointer; }
-    
-    .audio-btn { width: auto !important; display: inline-flex !important; align-items: center; gap: 5px; background: #334155 !important; color: white !important; padding: 6px 14px !important; font-size: 13px !important; border-radius: 20px !important; margin: 5px 0 !important; cursor: pointer; }
-    .audio-btn:hover { background: var(--accent) !important; color: #0f172a !important; }
-    .audio-btn-mini { width: auto !important; display: inline-flex !important; align-items: center; background: #334155 !important; color: white !important; padding: 3px 8px !important; font-size: 11px !important; border-radius: 6px !important; margin-left: 8px !important; vertical-align: middle; }
-
-    .progress-bar-container { background: #334155; border-radius: 8px; height: 10px; width: 100%; margin-bottom: 15px; overflow: hidden; }
-    .progress-bar { background: var(--accent); height: 100%; width: 0%; transition: width 0.3s; }
-    .stats-badge { display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; margin-bottom: 10px; }
-
-    .flashcard { background: var(--card); min-height: 240px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 25px; margin-bottom: 15px; border: 1px solid #334155; }
-    
-    .article-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-    .btn-der { background: var(--der); color: white; }
-    .btn-die { background: var(--die); color: white; }
-    .btn-das { background: var(--das); color: white; }
-
-    .word-type-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #334155; color: var(--accent); margin-left: 6px; text-transform: uppercase; cursor: pointer; border: 1px solid #475569; }
-
-    /* WhatsApp Tarzı Chatbot & İnteraktif Alanlar */
-    .chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .chat-box { height: 420px; overflow-y: auto; background: #0b1120; border-radius: 10px; padding: 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 12px; border: 1px solid #334155; }
-    .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; }
-    .msg-wrapper.user { align-self: flex-end; align-items: flex-end; }
-    .msg-wrapper.bot { align-self: flex-start; align-items: flex-start; }
-    
-    .msg { padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45; word-break: break-word; position: relative; }
-    .msg.user { background: #0284c7; color: white; border-bottom-right-radius: 2px; }
-    .msg.bot { background: #1e293b; color: #f8fafc; border-bottom-left-radius: 2px; border: 1px solid #334155; }
-    .msg-footer { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; color: #64748b; }
-    
-    .quick-chips { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 10px; padding-bottom: 4px; }
-    .chip-btn { width: auto !important; background: #1e293b !important; color: #38bdf8 !important; border: 1px solid #334155 !important; padding: 5px 12px !important; font-size: 12px !important; border-radius: 16px !important; margin-bottom: 0 !important; cursor: pointer; white-space: nowrap; }
-    .chip-btn:hover { background: #334155 !important; }
-
-    .input-group { display: flex; gap: 8px; align-items: center; }
-    .mic-btn { width: auto !important; background: #334155 !important; color: white !important; padding: 12px 16px !important; border-radius: 8px !important; margin-bottom: 10px !important; font-size: 16px !important; }
-    .mic-btn.recording { background: #ef4444 !important; animation: pulse 1s infinite; }
-
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
-    }
-
-    .nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card); display: flex; border-top: 1px solid #334155; }
-    .nav-btn { flex: 1; border: none; background: none; color: #94a3b8; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #1e293b; display: flex; border-top: 1px solid #334155; }
+    .nav-btn { flex: 1; border: none; background: none; color: #94a3b8; font-size: 13px; font-weight: bold; cursor: pointer; }
     .nav-btn.active { color: var(--accent); border-top: 2px solid var(--accent); }
   </style>
 </head>
 <body>
-
-  <header>
-    <h2>WortMeister</h2>
-  </header>
-
   <div class="container">
-    <!-- 1. SEKME: KELİMELERİM -->
-    <div id="tab-words" class="tab-content active">
-      <details style="margin-bottom: 15px; background: #1e293b; padding: 10px; border-radius: 8px;">
-        <summary style="cursor:pointer; color: #94a3b8; font-size: 14px;">⚙️ Bağlantı & Havuz Temizleme Ayarları</summary>
-        <div style="margin-top: 10px;">
-          <input type="text" id="api-key" placeholder="Gemini API Anahtarı" />
-          <input type="text" id="db-url" placeholder="Firebase DB URL (https://...firebasedatabase.app)" />
-          <div style="display: flex; gap: 8px; margin-top: 5px;">
-            <button style="background: #eab308; color: #0f172a; font-size: 13px;" onclick="reclassifyAllWords()">⚡ Havuzu Sınıflandır</button>
-            <button style="background: #ef4444; color: white; font-size: 13px;" onclick="removeDuplicatesFromPool()">🧹 Çift Kelimeleri Temizle</button>
-          </div>
-        </div>
-      </details>
-
-      <div class="section-box">
-        <div class="section-title">Yeni Kelime Ekle (İsim, Fiil, Sıfat, Bağlaç vb.)</div>
-        <input type="text" id="new-word" placeholder="Örn: trinken, Arzt, schnell, weil" />
-        <button id="add-btn" onclick="addSingleWord()">Gemini ile Çöz ve Ekle</button>
-      </div>
-
-      <div class="section-box">
-        <div class="section-title">Toplu Kelime Listesi / Paragraf Yapıştır</div>
-        <textarea id="bulk-text" rows="3" placeholder="Alt alta kelimeler veya bir metin parçası..."></textarea>
-        <button id="bulk-btn" class="btn-secondary" onclick="addBulkWords()">Toplu Listeyi Çöz ve Ekle</button>
-      </div>
-
-      <div class="section-box">
-        <div class="section-title">Kitaptan / Notlardan Fotoğraf Yükle</div>
-        <input type="file" id="ocr-image" accept="image/*" />
-        <button id="ocr-btn" class="btn-secondary" onclick="processImageOCR()">Fotoğraftaki Kelimeleri Çıkar</button>
-      </div>
-
-      <!-- Arama ve Kategori Filtreleri -->
-      <input type="text" id="word-search" placeholder="🔍 Kelimelerde veya Türkçe anlamlarda ara..." oninput="renderWords()" style="margin-bottom: 10px;" />
-      
-      <div class="filter-pills">
-        <button class="pill active" onclick="setWordFilter('all', this)">Tümü (<span id="cnt-all">0</span>)</button>
-        <button class="pill" onclick="setWordFilter('Nomen', this)">İsimler (<span id="cnt-nomen">0</span>)</button>
-        <button class="pill" onclick="setWordFilter('Verb', this)">Fiiller (<span id="cnt-verb">0</span>)</button>
-        <button class="pill" onclick="setWordFilter('Adjektiv', this)">Sıfatlar (<span id="cnt-adj">0</span>)</button>
-        <button class="pill" onclick="setWordFilter('Andere', this)">Bağlaç/Edat (<span id="cnt-other">0</span>)</button>
-      </div>
-
-      <div id="word-list"></div>
+    <div id="coach-tab" class="auto-coach-panel">
+      <h3>🤖 Otonom Koç Tavsiyesi</h3>
+      <p id="coach-advice" style="font-size: 14px; margin-top: 10px;">Verileriniz analiz ediliyor...</p>
     </div>
-
-    <!-- 2. SEKME: KART TEKRARI (FLASHCARD) -->
-    <div id="tab-cards" class="tab-content">
-      <div style="display:flex; gap:10px; margin-bottom:12px; align-items:center; background:#1e293b; padding:10px; border-radius:8px;">
-        <span style="font-size:13px; color:#94a3b8; white-space:nowrap;">🎯 Çalışma Grubu:</span>
-        <select id="card-group-select" onchange="changeCardGroup(this.value)" style="margin-bottom:0; padding:6px 10px;">
-          <option value="all">Karışık (Tüm Havuz)</option>
-          <option value="Nomen">Sadece İsimler (Artikel Pratiği)</option>
-          <option value="Verb">Sadece Fiiller</option>
-          <option value="Adjektiv">Sadece Sıfatlar</option>
-          <option value="Andere">Bağlaçlar & Edatlar</option>
-        </select>
-      </div>
-
-      <div class="stats-badge">
-        <span>İlerleme: <strong id="card-index-stat">0/0</strong></span>
-        <span>Doğru Serisi: <strong id="streak-stat" style="color:#10b981;">0 🔥</strong></span>
-      </div>
-      <div class="progress-bar-container">
-        <div class="progress-bar" id="progress-bar"></div>
-      </div>
-
-      <div class="flashcard">
-        <span id="card-type-badge" class="word-type-tag" style="margin-bottom:8px;"></span>
-        <h2 id="card-word" style="margin-bottom: 10px;">Kelime Yok</h2>
-        <button class="audio-btn" id="front-audio-btn" onclick="speakCurrentWord()">🔊 Telaffuzu Dinle (R)</button>
-
-        <div id="card-back-box" style="display:none; margin-top:15px; border-top: 1px solid #334155; padding-top: 15px; width: 100%;">
-          <h3 id="card-tr" style="color:var(--accent); margin-bottom:8px;"></h3>
-          <p id="card-example" style="font-size:15px; margin-bottom:6px;"></p>
-          <small id="card-example-tr" style="color:#94a3b8; display:block; margin-bottom:10px;"></small>
-          <button class="audio-btn" onclick="speakCurrentSentence()">🔊 Örnek Cümleyi Dinle</button>
-        </div>
-      </div>
-
-      <div id="article-guess-section" class="article-buttons" style="display:none;">
-        <button class="btn-der" onclick="guessArticle('der')">der (1)</button>
-        <button class="btn-die" onclick="guessArticle('die')">die (2)</button>
-        <button class="btn-das" onclick="guessArticle('das')">das (3)</button>
-      </div>
-
-      <div style="display: flex; gap: 10px;">
-        <button style="background: #334155; color:white;" onclick="flipCard()">Kartı Çevir (Boşluk)</button>
-        <button style="background: #ef4444; color:white;" onclick="answerCard(false)">Tekrar Et</button>
-        <button style="background: #10b981; color:white;" onclick="answerCard(true)">Biliyorum</button>
-      </div>
-      <p id="shortcuts-info" style="text-align:center; font-size:12px; color:#64748b; margin-top:5px;">Kısayollar: Boşluk: Çevir | R: Sesi Dinle</p>
-    </div>
-
-    <!-- 3. SEKME: CHATBOT (WHATSAPP TARZI & HIZLI) -->
-    <div id="tab-coach" class="tab-content">
-      <div class="chat-header">
-        <span style="font-size: 13px; color: #94a3b8;">💬 Almanca Pratik Koçu</span>
-        <button onclick="clearChatHistory()" style="width:auto; padding:4px 10px; font-size:12px; background:none; color:#ef4444; border:1px solid #ef4444; border-radius:6px; margin:0;">🗑️ Temizle</button>
-      </div>
-
-      <div class="chat-box" id="chat-box"></div>
-
-      <!-- Hızlı Aksiyon Butonları (Chips) -->
-      <div class="quick-chips">
-        <button class="chip-btn" onclick="sendQuickPrompt('Son cümleni Türkçe olarak açıklar mısın?')">💡 Türkçesi ne?</button>
-        <button class="chip-btn" onclick="sendQuickPrompt('Bunu daha basit ve A2 seviyesinde bir Almanca ile tekrar söyler misin?')">🔄 Basit açıkla (A2)</button>
-        <button class="chip-btn" onclick="sendQuickPrompt('Bana havuzumdaki kelimeleri kullanarak yeni bir soru sor!')">🎯 Yeni soru sor</button>
-        <button class="chip-btn" onclick="sendQuickPrompt('Sen bir doktorsun/yetkilisin, ben hastayım/müşteriyim. Bir diyalog başlatalım.')">🩺 Rol Pratiği</button>
-      </div>
-
-      <div class="input-group">
-        <button id="mic-btn" class="mic-btn" onclick="toggleVoiceInput()" title="Almanca Konuş">🎙️</button>
-        <input type="text" id="chat-input" placeholder="Almanca veya Türkçe yaz..." onkeydown="if(event.key==='Enter') sendChatMessage()" style="margin-bottom:10px;" />
-        <button id="chat-send-btn" onclick="sendChatMessage()" style="width: auto; padding: 12px 20px; margin-bottom: 10px;">Gönder</button>
-      </div>
-    </div>
+    
+    <div id="word-list"></div>
   </div>
 
   <div class="nav">
-    <button class="nav-btn active" onclick="switchTab('words', this)">Kelimeler</button>
-    <button class="nav-btn" onclick="switchTab('cards', this)">Kart Tekrarı</button>
-    <button class="nav-btn" onclick="switchTab('coach', this)">Almanca Koçu</button>
+    <button class="nav-btn active" onclick="location.reload()">Yenile</button>
   </div>
 
   <script>
     let words = [];
-    let chatMessages = [];
-    let currentCardIdx = 0;
-    let isFlipped = false;
-    let currentStreak = 0;
-    let currentWordObj = null;
-    let activeFilter = 'all';
-    let activeCardGroup = 'all';
-    let recognition = null;
-    let isRecording = false;
 
-    const apiKeyInput = document.getElementById('api-key');
-    const dbUrlInput = document.getElementById('db-url');
-
-    apiKeyInput.value = localStorage.getItem('wm_api_key') || '';
-    dbUrlInput.value = localStorage.getItem('wm_db_url') || '';
-
-    apiKeyInput.oninput = () => localStorage.setItem('wm_api_key', apiKeyInput.value.trim());
-    dbUrlInput.oninput = () => {
-      localStorage.setItem('wm_db_url', dbUrlInput.value.trim());
-      syncWithFirebase();
-    };
-
-    function switchTab(tab, btn) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-      document.getElementById(`tab-${tab}`).classList.add('active');
-      btn.classList.add('active');
-      if(tab === 'cards') loadCard();
-      if(tab === 'coach') scrollChatToBottom();
-    }
-
-    // --- MÜKERRER KONTROLÜ ---
-    function normalizeWordKey(str) {
-      if (!str) return '';
-      return str.toLowerCase().replace(/^(der|die|das)\s+/i, '').trim();
-    }
-
-    function isDuplicateWord(newWordText) {
-      const key = normalizeWordKey(newWordText);
-      return words.some(w => normalizeWordKey(w.word) === key);
-    }
-
-    // --- ALMANCA KELİME SINIFLANDIRMA ---
-    function sanitizeAndClassifyWord(item) {
-      let word = (item.word || '').trim();
-      let art = (item.article || '').toLowerCase().trim();
-      let type = (item.type || '').trim();
-
-      const articleMatch = word.match(/^(der|die|das)\s+(.*)/i);
-      if (articleMatch) {
-        art = articleMatch[1].toLowerCase();
-        word = `${art} ${articleMatch[2].charAt(0).toUpperCase() + articleMatch[2].slice(1)}`;
-        type = 'Nomen';
-      }
-
-      if (['der', 'die', 'das'].includes(art)) {
-        type = 'Nomen';
-        const parts = word.split(' ');
-        if(parts.length > 1) {
-          word = `${art} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
-        }
-      } else {
-        art = '';
-        if (type === 'Nomen') type = 'Verb';
-      }
-
-      if (type === 'Verb' || (!type && /^[a-zäöü].*(en|eln|ern)$/.test(word))) {
-        type = 'Verb';
-        art = '';
-        word = word.toLowerCase();
-      }
-
-      const commonOthers = ['weil', 'dass', 'obwohl', 'wenn', 'als', 'und', 'oder', 'aber', 'denn', 'sondern', 'mit', 'bei', 'nach', 'aus', 'zu', 'von', 'in', 'auf', 'an', 'über', 'unter', 'vor', 'hinter', 'neben', 'zwischen'];
-      if (commonOthers.includes(word.toLowerCase())) {
-        type = 'Andere';
-        art = '';
-      }
-
-      if (!['Nomen', 'Verb', 'Adjektiv', 'Andere'].includes(type)) type = 'Andere';
-
-      item.word = word;
-      item.article = art;
-      item.type = type;
-      return item;
-    }
-
-    // --- SES MOTORU (TTS & STT) ---
-    function playAudio(text) {
-      if (!text || !('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'de-DE';
-      utterance.rate = 0.88;
+    // OTONOM ANALİZ VE GÜNCELLEME (Gemini Beyni)
+    async function autonomousUpdate() {
+      if (words.length === 0) return;
       
-      const voices = window.speechSynthesis.getVoices();
-      const deVoice = voices.find(v => v.lang && v.lang.startsWith('de'));
-      if (deVoice) utterance.voice = deVoice;
+      // Performans Analizi
+      const needsReview = words.filter(w => w.wrongCount > w.correctCount);
+      const adviceElement = document.getElementById('coach-advice');
       
-      window.speechSynthesis.speak(utterance);
-    }
-
-    function speakCurrentWord() {
-      if (currentWordObj && currentWordObj.word) playAudio(currentWordObj.word);
-    }
-
-    function speakCurrentSentence() {
-      if (currentWordObj && currentWordObj.example) playAudio(currentWordObj.example);
-    }
-
-    // Mikrofonla Ses Tanıma (Speaking Pratiği)
-    function setupVoiceInput() {
-      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRec) return;
-      recognition = new SpeechRec();
-      recognition.lang = 'de-DE';
-      recognition.interimResults = false;
-
-      recognition.onstart = () => {
-        isRecording = true;
-        document.getElementById('mic-btn').classList.add('recording');
-      };
-
-      recognition.onresult = (e) => {
-        const transcript = e.results[0][0].transcript;
-        const input = document.getElementById('chat-input');
-        input.value = (input.value ? input.value + ' ' : '') + transcript;
-      };
-
-      recognition.onend = () => {
-        isRecording = false;
-        document.getElementById('mic-btn').classList.remove('recording');
-      };
-
-      recognition.onerror = () => {
-        isRecording = false;
-        document.getElementById('mic-btn').classList.remove('recording');
-      };
-    }
-
-    function toggleVoiceInput() {
-      if (!recognition) {
-        alert("Tarayıcınız ses tanımayı desteklemiyor veya izin verilmedi.");
-        return;
-      }
-      if (isRecording) {
-        recognition.stop();
+      if (needsReview.length > 0) {
+        const word = needsReview[0].word;
+        adviceElement.innerHTML = `<strong>Tavsiye:</strong> "${word}" kelimesinde zorlanıyorsun. Lütfen bugün buna özel odaklan.`;
+        // Otonom olarak durumu güncelle
+        words.forEach(w => {
+           if(w.wrongCount > w.correctCount) w.status = 'needs-review';
+           else w.status = 'known';
+        });
       } else {
-        recognition.start();
+        adviceElement.innerHTML = "Harika gidiyorsun! Bugün yeni kelimeler eklemeye hazır görünüyorsun.";
       }
+      
+      await saveWords();
+      renderWords();
     }
 
-    // --- BULUT (FIREBASE) SENKRONİZASYONU ---
+    // Firebase'den Veri Çekme (Senkronizasyon)
     async function syncWithFirebase() {
-      // 1. Yerel verileri yükle
-      const localWords = localStorage.getItem('wm_words');
-      if (localWords) {
-        try { words = JSON.parse(localWords).map(sanitizeAndClassifyWord); renderWords(); } catch(e) {}
-      }
-      const localChat = localStorage.getItem('wm_chat');
-      if (localChat) {
-        try { chatMessages = JSON.parse(localChat); renderChatMessages(); } catch(e) {}
-      }
-
       const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
       if(!dbUrl) return;
 
-      // 2. Buluttan kelimeleri çek
       try {
         const res = await fetch(`${dbUrl}/words.json`);
         const data = await res.json();
         if(data) {
-          const raw = Array.isArray(data) ? data : Object.values(data);
-          words = raw.map(sanitizeAndClassifyWord);
-          localStorage.setItem('wm_words', JSON.stringify(words));
-          renderWords();
-        }
-      } catch(e) {}
-
-      // 3. Buluttan sohbeti çek
-      try {
-        const resChat = await fetch(`${dbUrl}/chat_messages.json`);
-        const dataChat = await resChat.json();
-        if(dataChat) {
-          chatMessages = Array.isArray(dataChat) ? dataChat : Object.values(dataChat);
-          localStorage.setItem('wm_chat', JSON.stringify(chatMessages));
-          renderChatMessages();
+          words = Array.isArray(data) ? data : Object.values(data);
+          autonomousUpdate(); // Veriyi çeker çekmez otonom analiz yap
         }
       } catch(e) {}
     }
 
     async function saveWords() {
       localStorage.setItem('wm_words', JSON.stringify(words));
-      renderWords();
-      
       const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
       if(dbUrl) {
-        try {
-          await fetch(`${dbUrl}/words.json`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(words)
-          });
-        } catch(e) {}
-      }
-    }
-
-    async function saveChatMessages() {
-      localStorage.setItem('wm_chat', JSON.stringify(chatMessages));
-      renderChatMessages();
-
-      const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
-      if(dbUrl) {
-        try {
-          await fetch(`${dbUrl}/chat_messages.json`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(chatMessages)
-          });
-        } catch(e) {}
-      }
-    }
-
-    async function reclassifyAllWords() {
-      if (words.length === 0) { alert("Havuzda kelime yok."); return; }
-      words = words.map(sanitizeAndClassifyWord);
-      await saveWords();
-      alert("Tüm havuz Almanca dilbilgisi kurallarına göre yeniden sınıflandırıldı!");
-    }
-
-    async function removeDuplicatesFromPool() {
-      if (words.length === 0) { alert("Havuzda kelime yok."); return; }
-      const initialCount = words.length;
-      const seen = new Set();
-      const uniqueWords = [];
-
-      for (const item of words) {
-        const key = normalizeWordKey(item.word);
-        if (!seen.has(key)) {
-          seen.add(key);
-          uniqueWords.push(item);
-        }
-      }
-
-      const removedCount = initialCount - uniqueWords.length;
-      if (removedCount > 0) {
-        words = uniqueWords;
-        await saveWords();
-        alert(`${removedCount} adet mükerrer/çift kelime temizlendi!`);
-      } else {
-        alert("Havuzunuzda hiç mükerrer kelime yok, tertemiz!");
-      }
-    }
-
-    function cycleWordType(originalIndex) {
-      const types = ['Nomen', 'Verb', 'Adjektiv', 'Andere'];
-      const current = words[originalIndex].type || 'Andere';
-      const next = types[(types.indexOf(current) + 1) % types.length];
-      words[originalIndex].type = next;
-      if (next !== 'Nomen') words[originalIndex].article = '';
-      saveWords();
-    }
-
-    // --- GEMINI API ÇAĞRISI (HIZLANDIRILMIŞ) ---
-    async function callGemini(partsArray, isJson = false) {
-      const key = (localStorage.getItem('wm_api_key') || '').trim();
-      if(!key) { alert("Lütfen Gemini API anahtarınızı girin!"); return null; }
-      
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${key}`;
-      const payload = { contents: [{ parts: partsArray }] };
-      if (isJson) payload.generationConfig = { responseMimeType: "application/json" };
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if(data.error) throw new Error(data.error.message);
-      return data.candidates[0].content.parts[0].text;
-    }
-
-    async function addSingleWord() {
-      const input = document.getElementById('new-word');
-      const btn = document.getElementById('add-btn');
-      const text = input.value.trim();
-      if(!text) return;
-
-      if (isDuplicateWord(text)) {
-        alert(`"${text}" kelimesi zaten havuzunuzda mevcut!`);
-        input.value = '';
-        return;
-      }
-
-      btn.innerText = "Gemini Çözümlüyor...";
-      btn.disabled = true;
-
-      const prompt = `Şu Almanca kelimeyi analiz et: "${text}".
-KURALLAR:
-1. type: "Nomen", "Verb", "Adjektiv", "Andere"
-2. SADECE Nomen ise başına der/die/das koy ve ilk harfi BÜYÜK yap.
-3. Fiil, sıfat ve bağlaçta article="" (BOŞ) olsun.
-JSON:
-{"word": "Kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der|die|das veya boş", "plural": "çoğul veya boş", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}`;
-
-      try {
-        const resText = await callGemini([{ text: prompt }], true);
-        const item = sanitizeAndClassifyWord(JSON.parse(resText));
-
-        if (isDuplicateWord(item.word)) {
-          alert(`"${item.word}" zaten havuzunuzda ekli!`);
-          return;
-        }
-
-        item.status = 'new';
-        words.push(item);
-        await saveWords();
-        input.value = '';
-      } catch(e) {
-        alert("Hata: " + e.message);
-      } finally {
-        btn.innerText = "Gemini ile Çöz ve Ekle";
-        btn.disabled = false;
-      }
-    }
-
-    async function addBulkWords() {
-      const input = document.getElementById('bulk-text');
-      const btn = document.getElementById('bulk-btn');
-      const text = input.value.trim();
-      if(!text) return;
-
-      btn.innerText = "Kelimeler Ayrıştırılıyor...";
-      btn.disabled = true;
-
-      const prompt = `Metindeki Almanca kelimeleri ayıkla ve kategorize et:
-"""${text}"""
-Fiillere, sıfatlara artikel verme, sadece isimlere ver.
-JSON DİZİ (Array):
-[{"word": "kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der/die/das veya bos", "plural": "çoğul", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
-
-      try {
-        const resText = await callGemini([{ text: prompt }], true);
-        const items = JSON.parse(resText);
-        
-        let addedCount = 0;
-        let skippedCount = 0;
-
-        items.forEach(it => { 
-          const clean = sanitizeAndClassifyWord(it);
-          if (!isDuplicateWord(clean.word)) {
-            clean.status = 'new';
-            words.push(clean);
-            addedCount++;
-          } else {
-            skippedCount++;
-          }
+        await fetch(`${dbUrl}/words.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(words)
         });
-
-        await saveWords();
-        input.value = '';
-        
-        if (skippedCount > 0) {
-          alert(`${addedCount} yeni kelime eklendi!\n${skippedCount} kelime zaten havuzda olduğu için atlandı.`);
-        } else {
-          alert(`${addedCount} adet yeni kelime başarıyla eklendi!`);
-        }
-      } catch(e) {
-        alert("Toplu ekleme hatası: " + e.message);
-      } finally {
-        btn.innerText = "Toplu Listeyi Çöz ve Ekle";
-        btn.disabled = false;
       }
-    }
-
-    async function processImageOCR() {
-      const fileInput = document.getElementById('ocr-image');
-      const btn = document.getElementById('ocr-btn');
-      if(!fileInput.files || fileInput.files.length === 0) { alert("Fotoğraf seçin!"); return; }
-
-      btn.innerText = "Fotoğraf Okunuyor...";
-      btn.disabled = true;
-
-      const file = fileInput.files[0];
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64Data = reader.result.split(',')[1];
-        const prompt = `Fotoğraftaki Almanca kelimeleri JSON dizisi olarak döndür:
-[{"word": "kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der/die/das veya bos", "plural": "çoğul", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
-        try {
-          const resText = await callGemini([{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }], true);
-          const items = JSON.parse(resText);
-          
-          let addedCount = 0;
-          let skippedCount = 0;
-
-          items.forEach(it => { 
-            const clean = sanitizeAndClassifyWord(it);
-            if (!isDuplicateWord(clean.word)) {
-              clean.status = 'new';
-              words.push(clean);
-              addedCount++;
-            } else {
-              skippedCount++;
-            }
-          });
-
-          await saveWords();
-          fileInput.value = '';
-          
-          if (skippedCount > 0) {
-            alert(`Fotoğraftan ${addedCount} kelime eklendi!\n${skippedCount} kelime havuzunuzda zaten olduğu için atlandı.`);
-          } else {
-            alert(`Fotoğraftan ${addedCount} kelime başarıyla eklendi!`);
-          }
-        } catch(e) {
-          alert("OCR Hatası: " + e.message);
-        } finally {
-          btn.innerText = "Fotoğraftaki Kelimeleri Çıkar";
-          btn.disabled = false;
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-
-    // --- LİSTELEME & FİLTRELEME ---
-    function setWordFilter(filterType, btn) {
-      activeFilter = filterType;
-      document.querySelectorAll('.filter-pills .pill').forEach(el => el.classList.remove('active'));
-      btn.classList.add('active');
-      renderWords();
     }
 
     function renderWords() {
-      const cntAll = words.length;
-      const cntNomen = words.filter(w => w.type === 'Nomen').length;
-      const cntVerb = words.filter(w => w.type === 'Verb').length;
-      const cntAdj = words.filter(w => w.type === 'Adjektiv').length;
-      const cntOther = words.filter(w => w.type === 'Andere').length;
-
-      document.getElementById('cnt-all').innerText = cntAll;
-      document.getElementById('cnt-nomen').innerText = cntNomen;
-      document.getElementById('cnt-verb').innerText = cntVerb;
-      document.getElementById('cnt-adj').innerText = cntAdj;
-      document.getElementById('cnt-other').innerText = cntOther;
-
-      const searchTerm = (document.getElementById('word-search').value || '').toLowerCase().trim();
-
-      const filtered = words.map((w, originalIdx) => ({ ...w, originalIdx })).filter(w => {
-        const typeMatch = (activeFilter === 'all') || (w.type === activeFilter);
-        const searchMatch = !searchTerm || 
-          (w.word && w.word.toLowerCase().includes(searchTerm)) || 
-          (w.tr && w.tr.toLowerCase().includes(searchTerm));
-
-        return typeMatch && searchMatch;
-      });
-
       const list = document.getElementById('word-list');
-      if (filtered.length === 0) {
-        list.innerHTML = `<p style="color:#64748b; text-align:center; padding:20px;">Bu filtrede kelime bulunamadı.</p>`;
-        return;
-      }
-
-      list.innerHTML = filtered.map(w => {
-        const pluralText = w.plural ? ` (${w.plural})` : '';
-        return `
-        <div class="word-card ${w.article || ''}">
-          <button class="del-btn" onclick="deleteWord(${w.originalIdx})">Sil</button>
-          <strong>${w.word}</strong>${pluralText} 
-          <span class="word-type-tag" title="Türü değiştirmek için tıkla" onclick="cycleWordType(${w.originalIdx})">${w.type || 'DİĞER'}</span> - <em>${w.tr}</em>
-          <button class="audio-btn-mini" onclick="playAudio('${w.word.replace(/'/g, "\\'")}')">🔊 Dinle</button><br>
-          <small style="color:#94a3b8;">${w.example || ''} — <em>${w.example_tr || ''}</em></small>
+      list.innerHTML = words.map(w => `
+        <div class="word-card ${w.status === 'needs-review' ? 'needs-review' : ''}">
+          <strong>${w.word}</strong> ${w.status === 'needs-review' ? '<span class="status-pill">TEKRARLA</span>' : ''}
+          <p>${w.tr}</p>
         </div>
-      `}).reverse().join('');
+      `).join('');
     }
 
-    async function deleteWord(originalIndex) {
-      words.splice(originalIndex, 1);
-      await saveWords();
-    }
-
-    // --- KART TEKRARI MANTIĞI ---
-    function getActiveCardDeck() {
-      if (activeCardGroup === 'all') return words;
-      return words.filter(w => w.type === activeCardGroup);
-    }
-
-    function changeCardGroup(group) {
-      activeCardGroup = group;
-      currentCardIdx = 0;
-      currentStreak = 0;
-      loadCard();
-    }
-
-    function loadCard() {
-      const deck = getActiveCardDeck();
-
-      if(deck.length === 0) {
-        document.getElementById('card-word').innerText = "Bu grupta kelime yok";
-        document.getElementById('card-type-badge').innerText = "";
-        document.getElementById('front-audio-btn').style.display = 'none';
-        document.getElementById('article-guess-section').style.display = 'none';
-        document.getElementById('card-back-box').style.display = 'none';
-        document.getElementById('card-index-stat').innerText = "0/0";
-        document.getElementById('progress-bar').style.width = "0%";
-        currentWordObj = null;
-        return;
-      }
-
-      isFlipped = false;
-      const currentIdx = currentCardIdx % deck.length;
-      currentWordObj = deck[currentIdx];
-
-      document.getElementById('card-index-stat').innerText = `${currentIdx + 1}/${deck.length}`;
-      document.getElementById('progress-bar').style.width = `${((currentIdx + 1) / deck.length) * 100}%`;
-      document.getElementById('streak-stat').innerText = `${currentStreak} 🔥`;
-
-      const isNoun = currentWordObj.type === 'Nomen' && ['der', 'die', 'das'].includes((currentWordObj.article || '').toLowerCase());
-      document.getElementById('card-type-badge').innerText = currentWordObj.type || 'Wort';
-
-      if(isNoun) {
-        const cleanNoun = currentWordObj.word.replace(/^(der|die|das)\s+/i, '');
-        document.getElementById('card-word').innerText = `... ${cleanNoun}`;
-        document.getElementById('article-guess-section').style.display = 'grid';
-        document.getElementById('shortcuts-info').innerText = "Kısayollar: 1: der | 2: die | 3: das | Boşluk: Çevir | R: Dinle";
-      } else {
-        document.getElementById('card-word').innerText = currentWordObj.word;
-        document.getElementById('article-guess-section').style.display = 'none';
-        document.getElementById('shortcuts-info').innerText = "Kısayollar: Boşluk: Kartı Çevir | R: Sesi Dinle";
-      }
-
-      document.getElementById('front-audio-btn').style.display = 'inline-flex';
-      document.getElementById('card-back-box').style.display = 'none';
-      
-      const pluralInfo = currentWordObj.plural ? ` (${currentWordObj.plural})` : '';
-      document.getElementById('card-tr').innerText = `${currentWordObj.word}${pluralInfo} = ${currentWordObj.tr}`;
-      document.getElementById('card-example').innerText = currentWordObj.example || '';
-      document.getElementById('card-example-tr').innerText = currentWordObj.example_tr || '';
-    }
-
-    function flipCard() {
-      if(!currentWordObj) return;
-      isFlipped = !isFlipped;
-      document.getElementById('card-word').innerText = currentWordObj.word;
-      document.getElementById('card-back-box').style.display = isFlipped ? 'block' : 'none';
-    }
-
-    function guessArticle(guessed) {
-      if(!currentWordObj) return;
-      const correct = (currentWordObj.article || '').toLowerCase().trim();
-
-      if(guessed === correct) {
-        currentStreak++;
-        flipCard();
-        speakCurrentWord();
-      } else {
-        currentStreak = 0;
-        alert(`Yanlış! Doğru artikel: ${correct.toUpperCase()}`);
-        flipCard();
-        speakCurrentWord();
-      }
-      document.getElementById('streak-stat').innerText = `${currentStreak} 🔥`;
-    }
-
-    async function answerCard(known) {
-      const deck = getActiveCardDeck();
-      if(deck.length === 0) return;
-      if(known) currentStreak++; else currentStreak = 0;
-      currentCardIdx++;
-      loadCard();
-    }
-
-    window.addEventListener('keydown', (e) => {
-      const activeTab = document.getElementById('tab-cards').classList.contains('active');
-      if(!activeTab || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-
-      if(e.code === 'Space') { e.preventDefault(); flipCard(); }
-      
-      const isNoun = currentWordObj && currentWordObj.type === 'Nomen';
-      if(isNoun) {
-        if(e.key === '1') guessArticle('der');
-        if(e.key === '2') guessArticle('die');
-        if(e.key === '3') guessArticle('das');
-      }
-      
-      if(e.key.toLowerCase() === 'r') {
-        if(isFlipped) speakCurrentSentence(); else speakCurrentWord();
-      }
-    });
-
-    // --- WHATSAPP TARZI HIZLI CHATBOT SİSTEMİ ---
-    function renderChatMessages() {
-      const box = document.getElementById('chat-box');
-      if (chatMessages.length === 0) {
-        box.innerHTML = `
-          <div class="msg-wrapper bot">
-            <div class="msg bot">Hallo! 👋 Ben senin Almanca pratik koçunum. Kelime havuzuna tam hakimim. İster Almanca konuş, ister Türkçe sorular sor. Başlayalım mı?</div>
-          </div>
-        `;
-        return;
-      }
-
-      box.innerHTML = chatMessages.map((m, idx) => {
-        const isBot = m.role === 'model';
-        const speakerBtn = isBot ? `<button style="width:auto; padding:0; background:none; border:none; color:var(--accent); cursor:pointer; font-size:12px;" onclick="playAudio('${m.text.replace(/'/g, "\\'").replace(/\n/g, " ")}')">🔊 Dinle</button>` : '';
-        const timeStr = m.time || '';
-
-        return `
-          <div class="msg-wrapper ${isBot ? 'bot' : 'user'}">
-            <div class="msg ${isBot ? 'bot' : 'user'}">
-              ${m.text.replace(/\n/g, '<br>')}
-            </div>
-            <div class="msg-footer">
-              <span>${timeStr}</span>
-              ${speakerBtn}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      scrollChatToBottom();
-    }
-
-    function scrollChatToBottom() {
-      const box = document.getElementById('chat-box');
-      box.scrollTop = box.scrollHeight;
-    }
-
-    async function sendQuickPrompt(promptText) {
-      document.getElementById('chat-input').value = promptText;
-      await sendChatMessage();
-    }
-
-    async function clearChatHistory() {
-      if (confirm("Tüm sohbet geçmişini silmek istediğinize emin misiniz?")) {
-        chatMessages = [];
-        await saveChatMessages();
-      }
-    }
-
-    async function sendChatMessage() {
-      const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if(!text) return;
-
-      const key = (localStorage.getItem('wm_api_key') || '').trim();
-      if(!key) { alert("Lütfen Gemini API anahtarınızı girin!"); return; }
-
-      const sendBtn = document.getElementById('chat-send-btn');
-      sendBtn.disabled = true;
-      sendBtn.innerText = "Yazıyor...";
-
-      const now = new Date();
-      const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
-
-      // Kullanıcı mesajını kaydet ve göster
-      chatMessages.push({ role: 'user', text: text, time: timeStr });
-      input.value = '';
-      saveChatMessages();
-
-      // HAFİF VE HIZLI MODEL BAĞLAMI
-      // 1. Son 20 kelimenin basit listesi
-      const sampleWords = words.slice(-25).map(w => w.word).join(', ');
-
-      const systemPrompt = `Sen kullanıcının kişisel, samimi ve interaktif Almanca koçusun.
-Hedef seviye: A2-B1 seviyesi.
-Kullanıcının aktif kelime havuzundaki bazı önemli kelimeler: [${sampleWords}]
-
-GÖREVLERİN:
-1. Kullanıcı Almanca yazdığında bariz bir dilbilgisi/artikel/cümle hatası varsa, mesajının en başında nazikçe düzelt (Örn: "💡 Küçük bir not: '...' yerine '...' olmalı.").
-2. Ardından doğal, motive edici Almanca yanıt ver. Kullanıcıyı havuzundaki kelimeleri kullanmaya teşvik edecek açık uçlu sorular sor.
-3. Kullanıcı Türkçe soru sorarsa veya açıklama isterse net ve pedagojik şekilde açıkla.
-4. Yanıtlarını çok uzatma; sohbetin akıcı ve WhatsApp gibi dinamik kalmasını sağla.`;
-
-      // 2. Kayan Pencere: Sadece son 8-10 mesajı modele gönder (Yıldırım hızında yanıt için)
-      const recentHistory = chatMessages.slice(-10).map(m => ({
-        role: m.role,
-        parts: [{ text: m.text }]
-      }));
-
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${key}`;
-      const payload = {
-        systemInstruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        contents: recentHistory
-      };
-
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if(data.error) throw new Error(data.error.message);
-
-        const botReply = data.candidates[0].content.parts[0].text;
-        const botTime = new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0');
-
-        chatMessages.push({ role: 'model', text: botReply, time: botTime });
-        await saveChatMessages();
-      } catch(e) {
-        chatMessages.push({ role: 'model', text: "Hata oluştu: " + e.message, time: timeStr });
-        renderChatMessages();
-      } finally {
-        sendBtn.disabled = false;
-        sendBtn.innerText = "Gönder";
-      }
-    }
-
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-    }
-
-    window.onload = () => {
-      setupVoiceInput();
-      syncWithFirebase();
-    };
+    window.onload = syncWithFirebase;
   </script>
 </body>
 </html>
