@@ -79,11 +79,14 @@
     <!-- 1. SEKME: KELİMELERİM -->
     <div id="tab-words" class="tab-content active">
       <details style="margin-bottom: 15px; background: #1e293b; padding: 10px; border-radius: 8px;">
-        <summary style="cursor:pointer; color: #94a3b8; font-size: 14px;">⚙️ Bağlantı & Havuz Onarım Ayarları</summary>
+        <summary style="cursor:pointer; color: #94a3b8; font-size: 14px;">⚙️ Bağlantı & Havuz Temizleme Ayarları</summary>
         <div style="margin-top: 10px;">
           <input type="text" id="api-key" placeholder="Gemini API Anahtarı" />
           <input type="text" id="db-url" placeholder="Firebase DB URL (https://...firebasedatabase.app)" />
-          <button style="background: #eab308; color: #0f172a; margin-top: 5px;" onclick="reclassifyAllWords()">⚡ Mevcut Tüm Havuzu Akıllı Sınıflandır & Onar</button>
+          <div style="display: flex; gap: 8px; margin-top: 5px;">
+            <button style="background: #eab308; color: #0f172a; font-size: 13px;" onclick="reclassifyAllWords()">⚡ Havuzu Sınıflandır</button>
+            <button style="background: #ef4444; color: white; font-size: 13px;" onclick="removeDuplicatesFromPool()">🧹 Çift Kelimeleri Temizle</button>
+          </div>
         </div>
       </details>
 
@@ -95,7 +98,7 @@
 
       <div class="section-box">
         <div class="section-title">Toplu Kelime Listesi / Paragraf Yapıştır</div>
-        <textarea id="bulk-text" rows="3" placeholder="Alt alta kelimeler veya bir paragraf..."></textarea>
+        <textarea id="bulk-text" rows="3" placeholder="Alt alta kelimeler veya bir metin parçası..."></textarea>
         <button id="bulk-btn" class="btn-secondary" onclick="addBulkWords()">Toplu Listeyi Çöz ve Ekle</button>
       </div>
 
@@ -212,13 +215,23 @@
       if(tab === 'cards') loadCard();
     }
 
-    // --- ALMANCA KELİME NORMALLLEŞTİRME VE AKILLI DENETİM ---
+    // --- MÜKERRER KONTROLÜ İÇİN KELİME KÖKÜ TEMİZLEME ---
+    function normalizeWordKey(str) {
+      if (!str) return '';
+      return str.toLowerCase().replace(/^(der|die|das)\s+/i, '').trim();
+    }
+
+    function isDuplicateWord(newWordText) {
+      const key = normalizeWordKey(newWordText);
+      return words.some(w => normalizeWordKey(w.word) === key);
+    }
+
+    // --- ALMANCA KELİME SINIFLANDIRMA VE NORMALLEŞTİRME ---
     function sanitizeAndClassifyWord(item) {
       let word = (item.word || '').trim();
       let art = (item.article || '').toLowerCase().trim();
       let type = (item.type || '').trim();
 
-      // Kelime başında der/die/das varsa ayıkla
       const articleMatch = word.match(/^(der|die|das)\s+(.*)/i);
       if (articleMatch) {
         art = articleMatch[1].toLowerCase();
@@ -226,7 +239,6 @@
         type = 'Nomen';
       }
 
-      // Kategori mantığı denetimi
       if (['der', 'die', 'das'].includes(art)) {
         type = 'Nomen';
         const parts = word.split(' ');
@@ -234,18 +246,16 @@
           word = `${art} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
         }
       } else {
-        art = ''; // İsim değilse artikeli kesinlikle sil
-        if (type === 'Nomen') type = 'Verb'; // Artikelsiz isim olamayacağı için varsayılanı düzelt
+        art = '';
+        if (type === 'Nomen') type = 'Verb';
       }
 
-      // Fiil denetimi: Mastar eki ve küçük harf
       if (type === 'Verb' || (!type && /^[a-zäöü].*(en|eln|ern)$/.test(word))) {
         type = 'Verb';
         art = '';
         word = word.toLowerCase();
       }
 
-      // Bağlaç / Edat listesi denetimi
       const commonOthers = ['weil', 'dass', 'obwohl', 'wenn', 'als', 'und', 'oder', 'aber', 'denn', 'sondern', 'mit', 'bei', 'nach', 'aus', 'zu', 'von', 'in', 'auf', 'an', 'über', 'unter', 'vor', 'hinter', 'neben', 'zwischen'];
       if (commonOthers.includes(word.toLowerCase())) {
         type = 'Andere';
@@ -326,11 +336,36 @@
       }
     }
 
+    // --- HAVUZ TEMİZLEME & ONARMA ---
     async function reclassifyAllWords() {
       if (words.length === 0) { alert("Havuzda kelime yok."); return; }
       words = words.map(sanitizeAndClassifyWord);
       await saveWords();
-      alert("Tüm havuz Almanca dilbilgisi kurallarına göre yeniden sınıflandırıldı ve kaydedildi!");
+      alert("Tüm havuz Almanca dilbilgisi kurallarına göre yeniden sınıflandırıldı!");
+    }
+
+    async function removeDuplicatesFromPool() {
+      if (words.length === 0) { alert("Havuzda kelime yok."); return; }
+      const initialCount = words.length;
+      const seen = new Set();
+      const uniqueWords = [];
+
+      for (const item of words) {
+        const key = normalizeWordKey(item.word);
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueWords.push(item);
+        }
+      }
+
+      const removedCount = initialCount - uniqueWords.length;
+      if (removedCount > 0) {
+        words = uniqueWords;
+        await saveWords();
+        alert(`${removedCount} adet mükerrer/çift kelime temizlendi!`);
+      } else {
+        alert("Havuzunuzda hiç mükerrer kelime yok, tertemiz!");
+      }
     }
 
     function cycleWordType(originalIndex) {
@@ -367,30 +402,32 @@
       const text = input.value.trim();
       if(!text) return;
 
+      if (isDuplicateWord(text)) {
+        alert(`"${text}" kelimesi zaten havuzunuzda mevcut!`);
+        input.value = '';
+        return;
+      }
+
       btn.innerText = "Gemini Çözümlüyor...";
       btn.disabled = true;
 
-      const prompt = `Şu Almanca kelimeyi/ifadeyi dilbilgisi kurallarına göre kesin olarak analiz et: "${text}".
+      const prompt = `Şu Almanca kelimeyi analiz et: "${text}".
 KURALLAR:
-1. "type" alanı sadece şunlardan biri olabilir: "Nomen", "Verb", "Adjektiv", "Andere" (Bağlaç, Edat, Zamir için).
-2. SADECE Nomen (İsim) ise başına doğru artikeli (der/die/das) koy ve ilk harfini BÜYÜK yap.
-3. Fiil (Verb) ise küçük harfle mastar yaz (örn: trinken), article kısmını BOŞ ("") bırak.
-4. Sıfat (Adjektiv) veya Bağlaç/Edat (Andere) ise article kısmını BOŞ ("") bırak.
-
-JSON formatında döndür:
-{
-  "word": "Tam Almanca hali",
-  "type": "Nomen | Verb | Adjektiv | Andere",
-  "article": "der | die | das (sadece isimse, diğerlerinde bos string)",
-  "plural": "çoğul hali (fiil/bağlaçta boş)",
-  "tr": "Türkçe karşılığı",
-  "example": "Kısa ve net örnek cümle",
-  "example_tr": "Örnek cümlenin Türkçesi"
-}`;
+1. type: "Nomen", "Verb", "Adjektiv", "Andere"
+2. SADECE Nomen ise başına der/die/das koy ve ilk harfi BÜYÜK yap.
+3. Fiil, sıfat ve bağlaçta article="" (BOŞ) olsun.
+JSON:
+{"word": "Kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der|die|das veya boş", "plural": "çoğul veya boş", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}`;
 
       try {
         const resText = await callGemini([{ text: prompt }], true);
         const item = sanitizeAndClassifyWord(JSON.parse(resText));
+
+        if (isDuplicateWord(item.word)) {
+          alert(`"${item.word}" zaten havuzunuzda ekli!`);
+          return;
+        }
+
         item.status = 'new';
         words.push(item);
         await saveWords();
@@ -412,25 +449,38 @@ JSON formatında döndür:
       btn.innerText = "Kelimeler Ayrıştırılıyor...";
       btn.disabled = true;
 
-      const prompt = `Şu metindeki tüm önemli Almanca kelimeleri ayıkla ve kategorilerine göre sınıflandır:
+      const prompt = `Metindeki Almanca kelimeleri ayıkla ve kategorize et:
 """${text}"""
-KURALLAR:
-- type: "Nomen", "Verb", "Adjektiv", "Andere"
-- Sadece Nomen olanlara der/die/das ver ve büyük harfle başlat. Fiillere, sıfatlara, bağlaçlara artikel verme.
-JSON DİZİ (Array) döndür:
-[{"word": "kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der/die/das veya bos", "plural": "çoğul veya bos", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
+Fiillere, sıfatlara artikel verme, sadece isimlere ver.
+JSON DİZİ (Array):
+[{"word": "kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der/die/das veya bos", "plural": "çoğul", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
 
       try {
         const resText = await callGemini([{ text: prompt }], true);
         const items = JSON.parse(resText);
+        
+        let addedCount = 0;
+        let skippedCount = 0;
+
         items.forEach(it => { 
           const clean = sanitizeAndClassifyWord(it);
-          clean.status = 'new';
-          words.push(clean); 
+          if (!isDuplicateWord(clean.word)) {
+            clean.status = 'new';
+            words.push(clean);
+            addedCount++;
+          } else {
+            skippedCount++;
+          }
         });
+
         await saveWords();
         input.value = '';
-        alert(`${items.length} kelime başarıyla eklendi!`);
+        
+        if (skippedCount > 0) {
+          alert(`${addedCount} yeni kelime eklendi!\n${skippedCount} kelime zaten havuzda olduğu için atlandı.`);
+        } else {
+          alert(`${addedCount} adet yeni kelime başarıyla eklendi!`);
+        }
       } catch(e) {
         alert("Toplu ekleme hatası: " + e.message);
       } finally {
@@ -451,20 +501,34 @@ JSON DİZİ (Array) döndür:
       const reader = new FileReader();
       reader.onload = async () => {
         const base64Data = reader.result.split(',')[1];
-        const prompt = `Fotoğraftaki Almanca kelimeleri JSON dizisi olarak döndür. 
-Türleri (type): "Nomen", "Verb", "Adjektiv", "Andere" olarak ayır. Sadece isimlere artikel ata.
+        const prompt = `Fotoğraftaki Almanca kelimeleri JSON dizisi olarak döndür:
 [{"word": "kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der/die/das veya bos", "plural": "çoğul", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
         try {
           const resText = await callGemini([{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }], true);
           const items = JSON.parse(resText);
+          
+          let addedCount = 0;
+          let skippedCount = 0;
+
           items.forEach(it => { 
             const clean = sanitizeAndClassifyWord(it);
-            clean.status = 'new';
-            words.push(clean); 
+            if (!isDuplicateWord(clean.word)) {
+              clean.status = 'new';
+              words.push(clean);
+              addedCount++;
+            } else {
+              skippedCount++;
+            }
           });
+
           await saveWords();
           fileInput.value = '';
-          alert(`${items.length} kelime başarıyla aktarıldı!`);
+          
+          if (skippedCount > 0) {
+            alert(`Fotoğraftan ${addedCount} kelime eklendi!\n${skippedCount} kelime havuzunuzda zaten olduğu için atlandı.`);
+          } else {
+            alert(`Fotoğraftan ${addedCount} kelime başarıyla eklendi!`);
+          }
         } catch(e) {
           alert("OCR Hatası: " + e.message);
         } finally {
