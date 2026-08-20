@@ -56,7 +56,8 @@
     .btn-die { background: var(--die); color: white; }
     .btn-das { background: var(--das); color: white; }
 
-    .word-type-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #334155; color: #94a3b8; margin-left: 6px; text-transform: uppercase; }
+    .word-type-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #334155; color: var(--accent); margin-left: 6px; text-transform: uppercase; cursor: pointer; border: 1px solid #475569; }
+    .word-type-tag:hover { border-color: var(--accent); }
 
     .chat-box { height: 380px; overflow-y: auto; background: #0b1120; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; }
     .msg { padding: 10px 14px; border-radius: 8px; max-width: 80%; font-size: 14px; line-height: 1.4; }
@@ -78,16 +79,17 @@
     <!-- 1. SEKME: KELİMELERİM -->
     <div id="tab-words" class="tab-content active">
       <details style="margin-bottom: 15px; background: #1e293b; padding: 10px; border-radius: 8px;">
-        <summary style="cursor:pointer; color: #94a3b8; font-size: 14px;">⚙️ Bağlantı & Bulut Ayarları</summary>
+        <summary style="cursor:pointer; color: #94a3b8; font-size: 14px;">⚙️ Bağlantı & Havuz Onarım Ayarları</summary>
         <div style="margin-top: 10px;">
           <input type="text" id="api-key" placeholder="Gemini API Anahtarı" />
           <input type="text" id="db-url" placeholder="Firebase DB URL (https://...firebasedatabase.app)" />
+          <button style="background: #eab308; color: #0f172a; margin-top: 5px;" onclick="reclassifyAllWords()">⚡ Mevcut Tüm Havuzu Akıllı Sınıflandır & Onar</button>
         </div>
       </details>
 
       <div class="section-box">
-        <div class="section-title">Yeni Kelime Ekle (İsim, Fiil veya Sıfat)</div>
-        <input type="text" id="new-word" placeholder="Örn: trinken, Arzt, schnell" />
+        <div class="section-title">Yeni Kelime Ekle (İsim, Fiil, Sıfat, Bağlaç vb.)</div>
+        <input type="text" id="new-word" placeholder="Örn: trinken, Arzt, schnell, weil" />
         <button id="add-btn" onclick="addSingleWord()">Gemini ile Çöz ve Ekle</button>
       </div>
 
@@ -111,7 +113,7 @@
         <button class="pill" onclick="setWordFilter('Nomen', this)">İsimler (<span id="cnt-nomen">0</span>)</button>
         <button class="pill" onclick="setWordFilter('Verb', this)">Fiiller (<span id="cnt-verb">0</span>)</button>
         <button class="pill" onclick="setWordFilter('Adjektiv', this)">Sıfatlar (<span id="cnt-adj">0</span>)</button>
-        <button class="pill" onclick="setWordFilter('Andere', this)">Diğer (<span id="cnt-other">0</span>)</button>
+        <button class="pill" onclick="setWordFilter('Andere', this)">Bağlaç/Edat (<span id="cnt-other">0</span>)</button>
       </div>
 
       <div id="word-list"></div>
@@ -119,7 +121,6 @@
 
     <!-- 2. SEKME: KART TEKRARI (FLASHCARD) -->
     <div id="tab-cards" class="tab-content">
-      <!-- Odaklı Çalışma Grubu Seçici -->
       <div style="display:flex; gap:10px; margin-bottom:12px; align-items:center; background:#1e293b; padding:10px; border-radius:8px;">
         <span style="font-size:13px; color:#94a3b8; white-space:nowrap;">🎯 Çalışma Grubu:</span>
         <select id="card-group-select" onchange="changeCardGroup(this.value)" style="margin-bottom:0; padding:6px 10px;">
@@ -127,6 +128,7 @@
           <option value="Nomen">Sadece İsimler (Artikel Pratiği)</option>
           <option value="Verb">Sadece Fiiller</option>
           <option value="Adjektiv">Sadece Sıfatlar</option>
+          <option value="Andere">Bağlaçlar & Edatlar</option>
         </select>
       </div>
 
@@ -168,7 +170,7 @@
     <!-- 3. SEKME: CHATBOT -->
     <div id="tab-coach" class="tab-content">
       <div class="chat-box" id="chat-box">
-        <div class="msg bot">Hallo! Eklediğin tüm kelimelere, fiillere, sıfatlara ve telaffuzlarına hakimim. Pratik yapalım mı?</div>
+        <div class="msg bot">Hallo! Eklediğin tüm isimlere, fiillere, sıfatlara ve bağlaçlara tam hakimim. Nasıl çalışmak istersin?</div>
       </div>
       <input type="text" id="chat-input" placeholder="Koça mesaj yaz..." />
       <button onclick="sendChatMessage()">Gönder</button>
@@ -210,6 +212,56 @@
       if(tab === 'cards') loadCard();
     }
 
+    // --- ALMANCA KELİME NORMALLLEŞTİRME VE AKILLI DENETİM ---
+    function sanitizeAndClassifyWord(item) {
+      let word = (item.word || '').trim();
+      let art = (item.article || '').toLowerCase().trim();
+      let type = (item.type || '').trim();
+
+      // Kelime başında der/die/das varsa ayıkla
+      const articleMatch = word.match(/^(der|die|das)\s+(.*)/i);
+      if (articleMatch) {
+        art = articleMatch[1].toLowerCase();
+        word = `${art} ${articleMatch[2].charAt(0).toUpperCase() + articleMatch[2].slice(1)}`;
+        type = 'Nomen';
+      }
+
+      // Kategori mantığı denetimi
+      if (['der', 'die', 'das'].includes(art)) {
+        type = 'Nomen';
+        const parts = word.split(' ');
+        if(parts.length > 1) {
+          word = `${art} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
+        }
+      } else {
+        art = ''; // İsim değilse artikeli kesinlikle sil
+        if (type === 'Nomen') type = 'Verb'; // Artikelsiz isim olamayacağı için varsayılanı düzelt
+      }
+
+      // Fiil denetimi: Mastar eki ve küçük harf
+      if (type === 'Verb' || (!type && /^[a-zäöü].*(en|eln|ern)$/.test(word))) {
+        type = 'Verb';
+        art = '';
+        word = word.toLowerCase();
+      }
+
+      // Bağlaç / Edat listesi denetimi
+      const commonOthers = ['weil', 'dass', 'obwohl', 'wenn', 'als', 'und', 'oder', 'aber', 'denn', 'sondern', 'mit', 'bei', 'nach', 'aus', 'zu', 'von', 'in', 'auf', 'an', 'über', 'unter', 'vor', 'hinter', 'neben', 'zwischen'];
+      if (commonOthers.includes(word.toLowerCase())) {
+        type = 'Andere';
+        art = '';
+      }
+
+      if (!['Nomen', 'Verb', 'Adjektiv', 'Andere'].includes(type)) {
+        type = 'Andere';
+      }
+
+      item.word = word;
+      item.article = art;
+      item.type = type;
+      return item;
+    }
+
     // --- SES MOTORU ---
     function playAudio(text) {
       if (!text || !('speechSynthesis' in window)) return;
@@ -237,7 +289,10 @@
     async function syncWithFirebase() {
       const localData = localStorage.getItem('wm_words');
       if (localData) {
-        try { words = JSON.parse(localData); renderWords(); } catch(e) {}
+        try { 
+          words = JSON.parse(localData).map(sanitizeAndClassifyWord); 
+          renderWords(); 
+        } catch(e) {}
       }
 
       const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
@@ -247,7 +302,8 @@
         const res = await fetch(`${dbUrl}/words.json`);
         const data = await res.json();
         if(data) {
-          words = Array.isArray(data) ? data : Object.values(data);
+          const raw = Array.isArray(data) ? data : Object.values(data);
+          words = raw.map(sanitizeAndClassifyWord);
           localStorage.setItem('wm_words', JSON.stringify(words));
           renderWords();
         }
@@ -268,6 +324,22 @@
           });
         } catch(e) {}
       }
+    }
+
+    async function reclassifyAllWords() {
+      if (words.length === 0) { alert("Havuzda kelime yok."); return; }
+      words = words.map(sanitizeAndClassifyWord);
+      await saveWords();
+      alert("Tüm havuz Almanca dilbilgisi kurallarına göre yeniden sınıflandırıldı ve kaydedildi!");
+    }
+
+    function cycleWordType(originalIndex) {
+      const types = ['Nomen', 'Verb', 'Adjektiv', 'Andere'];
+      const current = words[originalIndex].type || 'Andere';
+      const next = types[(types.indexOf(current) + 1) % types.length];
+      words[originalIndex].type = next;
+      if (next !== 'Nomen') words[originalIndex].article = '';
+      saveWords();
     }
 
     // --- GEMINI API ---
@@ -298,23 +370,27 @@
       btn.innerText = "Gemini Çözümlüyor...";
       btn.disabled = true;
 
-      const prompt = `Şu Almanca kelimeyi analiz et: "${text}".
-Kelime türünü (Nomen, Verb, Adjektiv, Andere) kesin olarak belirle.
-İsimse artikeli (der/die/das) ekle; fiil veya sıfatsa article kısmı BOŞ olsun.
-JSON formatında tam olarak şu alanları döndür:
+      const prompt = `Şu Almanca kelimeyi/ifadeyi dilbilgisi kurallarına göre kesin olarak analiz et: "${text}".
+KURALLAR:
+1. "type" alanı sadece şunlardan biri olabilir: "Nomen", "Verb", "Adjektiv", "Andere" (Bağlaç, Edat, Zamir için).
+2. SADECE Nomen (İsim) ise başına doğru artikeli (der/die/das) koy ve ilk harfini BÜYÜK yap.
+3. Fiil (Verb) ise küçük harfle mastar yaz (örn: trinken), article kısmını BOŞ ("") bırak.
+4. Sıfat (Adjektiv) veya Bağlaç/Edat (Andere) ise article kısmını BOŞ ("") bırak.
+
+JSON formatında döndür:
 {
-  "word": "Kelimenin tam hali (örn: der Termin veya trinken)",
+  "word": "Tam Almanca hali",
   "type": "Nomen | Verb | Adjektiv | Andere",
-  "article": "der, die veya das (fiil/sıfatta boş bırak)",
-  "plural": "çoğul hali (fiil/sıfatta boş bırak)",
+  "article": "der | die | das (sadece isimse, diğerlerinde bos string)",
+  "plural": "çoğul hali (fiil/bağlaçta boş)",
   "tr": "Türkçe karşılığı",
-  "example": "A2-B1 seviyesinde örnek cümle",
-  "example_tr": "cümle Türkçe çevirisi"
+  "example": "Kısa ve net örnek cümle",
+  "example_tr": "Örnek cümlenin Türkçesi"
 }`;
 
       try {
         const resText = await callGemini([{ text: prompt }], true);
-        const item = JSON.parse(resText);
+        const item = sanitizeAndClassifyWord(JSON.parse(resText));
         item.status = 'new';
         words.push(item);
         await saveWords();
@@ -336,18 +412,25 @@ JSON formatında tam olarak şu alanları döndür:
       btn.innerText = "Kelimeler Ayrıştırılıyor...";
       btn.disabled = true;
 
-      const prompt = `Şu metindeki tüm Almanca kelimeleri ayıkla, türlerini (Nomen, Verb, Adjektiv, Andere) belirle.
-Fiillere/sıfatlara artikel verme, sadece isimlere der/die/das ver.
+      const prompt = `Şu metindeki tüm önemli Almanca kelimeleri ayıkla ve kategorilerine göre sınıflandır:
+"""${text}"""
+KURALLAR:
+- type: "Nomen", "Verb", "Adjektiv", "Andere"
+- Sadece Nomen olanlara der/die/das ver ve büyük harfle başlat. Fiillere, sıfatlara, bağlaçlara artikel verme.
 JSON DİZİ (Array) döndür:
-[{"word": "kelime", "type": "Nomen/Verb/Adjektiv/Andere", "article": "der/die/das veya boş", "plural": "çoğulu", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
+[{"word": "kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der/die/das veya bos", "plural": "çoğul veya bos", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
 
       try {
         const resText = await callGemini([{ text: prompt }], true);
         const items = JSON.parse(resText);
-        items.forEach(it => { it.status = 'new'; words.push(it); });
+        items.forEach(it => { 
+          const clean = sanitizeAndClassifyWord(it);
+          clean.status = 'new';
+          words.push(clean); 
+        });
         await saveWords();
         input.value = '';
-        alert(`${items.length} kelime eklendi!`);
+        alert(`${items.length} kelime başarıyla eklendi!`);
       } catch(e) {
         alert("Toplu ekleme hatası: " + e.message);
       } finally {
@@ -368,12 +451,17 @@ JSON DİZİ (Array) döndür:
       const reader = new FileReader();
       reader.onload = async () => {
         const base64Data = reader.result.split(',')[1];
-        const prompt = `Fotoğraftaki Almanca kelimeleri türleriyle (Nomen, Verb, Adjektiv, Andere) JSON dizisi olarak döndür:
-[{"word": "kelime", "type": "Nomen/Verb/Adjektiv/Andere", "article": "der/die/das veya boş", "plural": "çoğulu", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
+        const prompt = `Fotoğraftaki Almanca kelimeleri JSON dizisi olarak döndür. 
+Türleri (type): "Nomen", "Verb", "Adjektiv", "Andere" olarak ayır. Sadece isimlere artikel ata.
+[{"word": "kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der/die/das veya bos", "plural": "çoğul", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
         try {
           const resText = await callGemini([{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }], true);
           const items = JSON.parse(resText);
-          items.forEach(it => { it.status = 'new'; words.push(it); });
+          items.forEach(it => { 
+            const clean = sanitizeAndClassifyWord(it);
+            clean.status = 'new';
+            words.push(clean); 
+          });
           await saveWords();
           fileInput.value = '';
           alert(`${items.length} kelime başarıyla aktarıldı!`);
@@ -396,29 +484,22 @@ JSON DİZİ (Array) döndür:
     }
 
     function renderWords() {
-      // Sayaçları güncelle
       const cntAll = words.length;
-      const cntNomen = words.filter(w => (w.type || '').toLowerCase() === 'nomen' || (w.article && ['der','die','das'].includes(w.article.toLowerCase()))).length;
-      const cntVerb = words.filter(w => (w.type || '').toLowerCase() === 'verb').length;
-      const cntAdj = words.filter(w => (w.type || '').toLowerCase() === 'adjektiv').length;
-      const cntOther = cntAll - (cntNomen + cntVerb + cntAdj);
+      const cntNomen = words.filter(w => w.type === 'Nomen').length;
+      const cntVerb = words.filter(w => w.type === 'Verb').length;
+      const cntAdj = words.filter(w => w.type === 'Adjektiv').length;
+      const cntOther = words.filter(w => w.type === 'Andere').length;
 
       document.getElementById('cnt-all').innerText = cntAll;
       document.getElementById('cnt-nomen').innerText = cntNomen;
       document.getElementById('cnt-verb').innerText = cntVerb;
       document.getElementById('cnt-adj').innerText = cntAdj;
-      document.getElementById('cnt-other').innerText = cntOther > 0 ? cntOther : 0;
+      document.getElementById('cnt-other').innerText = cntOther;
 
       const searchTerm = (document.getElementById('word-search').value || '').toLowerCase().trim();
 
-      // Filtreleme mantığı
       const filtered = words.map((w, originalIdx) => ({ ...w, originalIdx })).filter(w => {
-        const typeMatch = (activeFilter === 'all') ||
-          (activeFilter === 'Nomen' && ((w.type || '').toLowerCase() === 'nomen' || (w.article && ['der','die','das'].includes(w.article.toLowerCase())))) ||
-          (activeFilter === 'Verb' && (w.type || '').toLowerCase() === 'verb') ||
-          (activeFilter === 'Adjektiv' && (w.type || '').toLowerCase() === 'adjektiv') ||
-          (activeFilter === 'Andere' && !['nomen','verb','adjektiv'].includes((w.type || '').toLowerCase()) && !w.article);
-
+        const typeMatch = (activeFilter === 'all') || (w.type === activeFilter);
         const searchMatch = !searchTerm || 
           (w.word && w.word.toLowerCase().includes(searchTerm)) || 
           (w.tr && w.tr.toLowerCase().includes(searchTerm));
@@ -433,12 +514,12 @@ JSON DİZİ (Array) döndür:
       }
 
       list.innerHTML = filtered.map(w => {
-        const typeBadge = w.type ? `<span class="word-type-tag">${w.type}</span>` : '';
         const pluralText = w.plural ? ` (${w.plural})` : '';
         return `
         <div class="word-card ${w.article || ''}">
           <button class="del-btn" onclick="deleteWord(${w.originalIdx})">Sil</button>
-          <strong>${w.word}</strong>${pluralText} ${typeBadge} - <em>${w.tr}</em>
+          <strong>${w.word}</strong>${pluralText} 
+          <span class="word-type-tag" title="Türü değiştirmek için tıkla" onclick="cycleWordType(${w.originalIdx})">${w.type || 'DİĞER'}</span> - <em>${w.tr}</em>
           <button class="audio-btn-mini" onclick="playAudio('${w.word.replace(/'/g, "\\'")}')">🔊 Dinle</button><br>
           <small style="color:#94a3b8;">${w.example || ''} — <em>${w.example_tr || ''}</em></small>
         </div>
@@ -450,19 +531,10 @@ JSON DİZİ (Array) döndür:
       await saveWords();
     }
 
-    // --- KART TEKRARI MANTIĞI (ODAKLI GRUP DESTEKLİ) ---
+    // --- KART TEKRARI MANTIĞI ---
     function getActiveCardDeck() {
       if (activeCardGroup === 'all') return words;
-      if (activeCardGroup === 'Nomen') {
-        return words.filter(w => (w.type || '').toLowerCase() === 'nomen' || (w.article && ['der','die','das'].includes(w.article.toLowerCase())));
-      }
-      if (activeCardGroup === 'Verb') {
-        return words.filter(w => (w.type || '').toLowerCase() === 'verb');
-      }
-      if (activeCardGroup === 'Adjektiv') {
-        return words.filter(w => (w.type || '').toLowerCase() === 'adjektiv');
-      }
-      return words;
+      return words.filter(w => w.type === activeCardGroup);
     }
 
     function changeCardGroup(group) {
@@ -495,10 +567,10 @@ JSON DİZİ (Array) döndür:
       document.getElementById('progress-bar').style.width = `${((currentIdx + 1) / deck.length) * 100}%`;
       document.getElementById('streak-stat').innerText = `${currentStreak} 🔥`;
 
-      const hasArticle = currentWordObj.article && ['der', 'die', 'das'].includes(currentWordObj.article.toLowerCase().trim());
-      document.getElementById('card-type-badge').innerText = currentWordObj.type || (hasArticle ? 'Nomen' : 'Wort');
+      const isNoun = currentWordObj.type === 'Nomen' && ['der', 'die', 'das'].includes((currentWordObj.article || '').toLowerCase());
+      document.getElementById('card-type-badge').innerText = currentWordObj.type || 'Wort';
 
-      if(hasArticle) {
+      if(isNoun) {
         const cleanNoun = currentWordObj.word.replace(/^(der|die|das)\s+/i, '');
         document.getElementById('card-word').innerText = `... ${cleanNoun}`;
         document.getElementById('article-guess-section').style.display = 'grid';
@@ -556,8 +628,8 @@ JSON DİZİ (Array) döndür:
 
       if(e.code === 'Space') { e.preventDefault(); flipCard(); }
       
-      const hasArticle = currentWordObj && currentWordObj.article && ['der', 'die', 'das'].includes(currentWordObj.article.toLowerCase().trim());
-      if(hasArticle) {
+      const isNoun = currentWordObj && currentWordObj.type === 'Nomen';
+      if(isNoun) {
         if(e.key === '1') guessArticle('der');
         if(e.key === '2') guessArticle('die');
         if(e.key === '3') guessArticle('das');
@@ -580,11 +652,11 @@ JSON DİZİ (Array) döndür:
       chatBox.scrollTop = chatBox.scrollHeight;
 
       const fullPrompt = `Sen kullanıcının kişisel Almanca koçusun.
-Kullanıcının kategorize edilmiş güncel havuzu:
+Kullanıcının kategorize edilmiş havuzu (İsimler, Fiiller, Sıfatlar, Bağlaçlar):
 ${JSON.stringify(words)}
 
 Kullanıcının mesajı: "${text}"
-Kullanıcıya seviyesine uygun, motive edici ve havuzundaki kelimeler/fiiller üzerinden örneklerle yanıt ver.`;
+Kullanıcıya seviyesine uygun, motive edici ve havuzundaki doğru kelime türlerine dikkat çekerek yanıt ver.`;
 
       try {
         const reply = await callGemini([{ text: fullPrompt }], false);
