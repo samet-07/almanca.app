@@ -3,68 +3,320 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WortMeister - Otonom Koç</title>
+  <title>WortMeister - Almanca Kelime & Otonom Koç</title>
   <style>
-    :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; --warn: #eab308; }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --accent: #38bdf8;
+      --der: #3b82f6;
+      --die: #ef4444;
+      --das: #10b981;
+      --warn: #eab308;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: var(--bg); color: var(--text); padding-bottom: 80px; }
+    header { padding: 15px; text-align: center; background: var(--card); border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10; }
     .container { padding: 20px; max-width: 650px; margin: auto; }
-    /* Otonom Paneli */
-    .auto-coach-panel { background: #1e3a8a; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--accent); }
-    .status-pill { display: inline-block; padding: 4px 10px; border-radius: 15px; font-size: 11px; background: var(--warn); color: #000; font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
     
-    /* Mevcut Bileşenler */
-    .word-card { background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #64748b; }
+    input, textarea, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 10px; font-size: 15px; }
+    button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #0f172a; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+    .btn-secondary { background: #334155; color: white; }
+    
+    .section-box { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; }
+    .section-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; color: var(--accent); }
+
+    /* Otonom Koç Paneli */
+    .auto-coach-panel { background: #1e3a8a; padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--accent); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .status-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; background: var(--warn); color: #000; font-weight: bold; text-transform: uppercase; }
+
+    /* Filtre Butonları (Pills) */
+    .filter-pills { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 4px; }
+    .pill { width: auto !important; background: #334155 !important; color: #94a3b8 !important; padding: 6px 14px !important; font-size: 13px !important; border-radius: 20px !important; margin-bottom: 0 !important; cursor: pointer; white-space: nowrap; }
+    .pill.active { background: var(--accent) !important; color: #0f172a !important; font-weight: bold; }
+
+    /* Kelime Kartı */
+    .word-card { background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #64748b; position: relative; }
+    .word-card.der { border-left-color: var(--der); }
+    .word-card.die { border-left-color: var(--die); }
+    .word-card.das { border-left-color: var(--das); }
     .word-card.needs-review { border-left-color: var(--warn); }
+    .del-btn { position: absolute; right: 10px; top: 10px; background: none; border: none; color: #ef4444; font-size: 14px; width: auto; padding: 0; cursor: pointer; }
     
-    .nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #1e293b; display: flex; border-top: 1px solid #334155; }
-    .nav-btn { flex: 1; border: none; background: none; color: #94a3b8; font-size: 13px; font-weight: bold; cursor: pointer; }
+    .audio-btn { width: auto !important; display: inline-flex !important; align-items: center; gap: 5px; background: #334155 !important; color: white !important; padding: 6px 14px !important; font-size: 13px !important; border-radius: 20px !important; margin: 5px 0 !important; cursor: pointer; }
+    .audio-btn:hover { background: var(--accent) !important; color: #0f172a !important; }
+    .audio-btn-mini { width: auto !important; display: inline-flex !important; align-items: center; background: #334155 !important; color: white !important; padding: 3px 8px !important; font-size: 11px !important; border-radius: 6px !important; margin-left: 8px !important; vertical-align: middle; }
+
+    .progress-bar-container { background: #334155; border-radius: 8px; height: 10px; width: 100%; margin-bottom: 15px; overflow: hidden; }
+    .progress-bar { background: var(--accent); height: 100%; width: 0%; transition: width 0.3s; }
+    .stats-badge { display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; margin-bottom: 10px; }
+
+    .flashcard { background: var(--card); min-height: 240px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 25px; margin-bottom: 15px; border: 1px solid #334155; }
+    
+    .article-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .btn-der { background: var(--der); color: white; }
+    .btn-die { background: var(--die); color: white; }
+    .btn-das { background: var(--das); color: white; }
+
+    .word-type-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #334155; color: var(--accent); margin-left: 6px; text-transform: uppercase; cursor: pointer; border: 1px solid #475569; }
+
+    .nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--card); display: flex; border-top: 1px solid #334155; }
+    .nav-btn { flex: 1; border: none; background: none; color: #94a3b8; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .nav-btn.active { color: var(--accent); border-top: 2px solid var(--accent); }
   </style>
 </head>
 <body>
+
+  <header>
+    <h2>WortMeister</h2>
+  </header>
+
   <div class="container">
-    <div id="coach-tab" class="auto-coach-panel">
-      <h3>🤖 Otonom Koç Tavsiyesi</h3>
-      <p id="coach-advice" style="font-size: 14px; margin-top: 10px;">Verileriniz analiz ediliyor...</p>
+    <!-- 1. SEKME: KELİMELERİM -->
+    <div id="tab-words" class="tab-content active">
+      <details style="margin-bottom: 15px; background: #1e293b; padding: 10px; border-radius: 8px;">
+        <summary style="cursor:pointer; color: #94a3b8; font-size: 14px;">⚙️ Bağlantı & Havuz Temizleme Ayarları</summary>
+        <div style="margin-top: 10px;">
+          <input type="text" id="api-key" placeholder="Gemini API Anahtarı" />
+          <input type="text" id="db-url" placeholder="Firebase DB URL (https://...firebasedatabase.app)" />
+          <div style="display: flex; gap: 8px; margin-top: 5px;">
+            <button style="background: #eab308; color: #0f172a; font-size: 13px;" onclick="reclassifyAllWords()">⚡ Havuzu Sınıflandır</button>
+            <button style="background: #ef4444; color: white; font-size: 13px;" onclick="removeDuplicatesFromPool()">🧹 Çift Kelimeleri Temizle</button>
+          </div>
+        </div>
+      </details>
+
+      <!-- Otonom Koç Paneli -->
+      <div class="auto-coach-panel">
+        <div>
+          <span style="font-size: 11px; color: var(--accent); font-weight: bold; text-transform: uppercase;">🤖 Otonom Koç</span>
+          <p id="coach-advice" style="font-size: 13px; margin-top: 2px;">Verileriniz analiz ediliyor...</p>
+        </div>
+      </div>
+
+      <div class="section-box">
+        <div class="section-title">Yeni Kelime Ekle (İsim, Fiil, Sıfat, Bağlaç vb.)</div>
+        <input type="text" id="new-word" placeholder="Örn: trinken, Arzt, schnell, weil" />
+        <button id="add-btn" onclick="addSingleWord()">Gemini ile Çöz ve Ekle</button>
+      </div>
+
+      <div class="section-box">
+        <div class="section-title">Toplu Kelime Listesi / Paragraf Yapıştır</div>
+        <textarea id="bulk-text" rows="3" placeholder="Alt alta kelimeler veya bir metin parçası..."></textarea>
+        <button id="bulk-btn" class="btn-secondary" onclick="addBulkWords()">Toplu Listeyi Çöz ve Ekle</button>
+      </div>
+
+      <div class="section-box">
+        <div class="section-title">Kitaptan / Notlardan Fotoğraf Yükle</div>
+        <input type="file" id="ocr-image" accept="image/*" />
+        <button id="ocr-btn" class="btn-secondary" onclick="processImageOCR()">Fotoğraftaki Kelimeleri Çıkar</button>
+      </div>
+
+      <!-- Arama ve Kategori Filtreleri -->
+      <input type="text" id="word-search" placeholder="🔍 Kelimelerde veya Türkçe anlamlarda ara..." oninput="renderWords()" style="margin-bottom: 10px;" />
+      
+      <div class="filter-pills">
+        <button class="pill active" onclick="setWordFilter('all', this)">Tümü (<span id="cnt-all">0</span>)</button>
+        <button class="pill" onclick="setWordFilter('Nomen', this)">İsimler (<span id="cnt-nomen">0</span>)</button>
+        <button class="pill" onclick="setWordFilter('Verb', this)">Fiiller (<span id="cnt-verb">0</span>)</button>
+        <button class="pill" onclick="setWordFilter('Adjektiv', this)">Sıfatlar (<span id="cnt-adj">0</span>)</button>
+        <button class="pill" onclick="setWordFilter('Andere', this)">Bağlaç/Edat (<span id="cnt-other">0</span>)</button>
+      </div>
+
+      <div id="word-list"></div>
     </div>
-    
-    <div id="word-list"></div>
+
+    <!-- 2. SEKME: KART TEKRARI (FLASHCARD) -->
+    <div id="tab-cards" class="tab-content">
+      <div style="display:flex; gap:10px; margin-bottom:12px; align-items:center; background:#1e293b; padding:10px; border-radius:8px;">
+        <span style="font-size:13px; color:#94a3b8; white-space:nowrap;">🎯 Çalışma Grubu:</span>
+        <select id="card-group-select" onchange="changeCardGroup(this.value)" style="margin-bottom:0; padding:6px 10px;">
+          <option value="all">Karışık (Tüm Havuz)</option>
+          <option value="Nomen">Sadece İsimler (Artikel Pratiği)</option>
+          <option value="Verb">Sadece Fiiller</option>
+          <option value="Adjektiv">Sadece Sıfatlar</option>
+          <option value="Andere">Bağlaçlar & Edatlar</option>
+        </select>
+      </div>
+
+      <div class="stats-badge">
+        <span>İlerleme: <strong id="card-index-stat">0/0</strong></span>
+        <span>Doğru Serisi: <strong id="streak-stat" style="color:#10b981;">0 🔥</strong></span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+
+      <div class="flashcard">
+        <span id="card-type-badge" class="word-type-tag" style="margin-bottom:8px;"></span>
+        <h2 id="card-word" style="margin-bottom: 10px;">Kelime Yok</h2>
+        <button class="audio-btn" id="front-audio-btn" onclick="speakCurrentWord()">🔊 Telaffuzu Dinle (R)</button>
+
+        <div id="card-back-box" style="display:none; margin-top:15px; border-top: 1px solid #334155; padding-top: 15px; width: 100%;">
+          <h3 id="card-tr" style="color:var(--accent); margin-bottom:8px;"></h3>
+          <p id="card-example" style="font-size:15px; margin-bottom:6px;"></p>
+          <small id="card-example-tr" style="color:#94a3b8; display:block; margin-bottom:10px;"></small>
+          <button class="audio-btn" onclick="speakCurrentSentence()">🔊 Örnek Cümleyi Dinle</button>
+        </div>
+      </div>
+
+      <div id="article-guess-section" class="article-buttons" style="display:none;">
+        <button class="btn-der" onclick="guessArticle('der')">der (1)</button>
+        <button class="btn-die" onclick="guessArticle('die')">die (2)</button>
+        <button class="btn-das" onclick="guessArticle('das')">das (3)</button>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button style="background: #334155; color:white;" onclick="flipCard()">Kartı Çevir (Boşluk)</button>
+        <button style="background: #ef4444; color:white;" onclick="answerCard(false)">Tekrar Et</button>
+        <button style="background: #10b981; color:white;" onclick="answerCard(true)">Biliyorum</button>
+      </div>
+      <p id="shortcuts-info" style="text-align:center; font-size:12px; color:#64748b; margin-top:5px;">Kısayollar: Boşluk: Çevir | R: Sesi Dinle</p>
+    </div>
   </div>
 
   <div class="nav">
-    <button class="nav-btn active" onclick="location.reload()">Yenile</button>
+    <button class="nav-btn active" onclick="switchTab('words', this)">Kelimeler</button>
+    <button class="nav-btn" onclick="switchTab('cards', this)">Kart Tekrarı</button>
   </div>
 
   <script>
     let words = [];
+    let currentCardIdx = 0;
+    let isFlipped = false;
+    let currentStreak = 0;
+    let currentWordObj = null;
+    let activeFilter = 'all';
+    let activeCardGroup = 'all';
 
-    // OTONOM ANALİZ VE GÜNCELLEME (Gemini Beyni)
-    async function autonomousUpdate() {
-      if (words.length === 0) return;
-      
-      // Performans Analizi
-      const needsReview = words.filter(w => w.wrongCount > w.correctCount);
-      const adviceElement = document.getElementById('coach-advice');
-      
-      if (needsReview.length > 0) {
-        const word = needsReview[0].word;
-        adviceElement.innerHTML = `<strong>Tavsiye:</strong> "${word}" kelimesinde zorlanıyorsun. Lütfen bugün buna özel odaklan.`;
-        // Otonom olarak durumu güncelle
-        words.forEach(w => {
-           if(w.wrongCount > w.correctCount) w.status = 'needs-review';
-           else w.status = 'known';
-        });
-      } else {
-        adviceElement.innerHTML = "Harika gidiyorsun! Bugün yeni kelimeler eklemeye hazır görünüyorsun.";
-      }
-      
-      await saveWords();
-      renderWords();
+    const apiKeyInput = document.getElementById('api-key');
+    const dbUrlInput = document.getElementById('db-url');
+
+    apiKeyInput.value = localStorage.getItem('wm_api_key') || '';
+    dbUrlInput.value = localStorage.getItem('wm_db_url') || '';
+
+    apiKeyInput.oninput = () => localStorage.setItem('wm_api_key', apiKeyInput.value.trim());
+    dbUrlInput.oninput = () => {
+      localStorage.setItem('wm_db_url', dbUrlInput.value.trim());
+      syncWithFirebase();
+    };
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      btn.classList.add('active');
+      if(tab === 'cards') loadCard();
     }
 
-    // Firebase'den Veri Çekme (Senkronizasyon)
+    // --- OTONOM KOÇ ANALİZ MOTORU ---
+    function runAutonomousAnalysis() {
+      const adviceEl = document.getElementById('coach-advice');
+      if (words.length === 0) {
+        adviceEl.innerText = "Havuzunuz boş. Kelime ekleyerek başlayın!";
+        return;
+      }
+
+      const needsReview = words.filter(w => (w.wrongCount || 0) > (w.correctCount || 0));
+      if (needsReview.length > 0) {
+        const target = needsReview[Math.floor(Math.random() * needsReview.length)];
+        adviceEl.innerHTML = `Zorlandığınız <strong>"${target.word}"</strong> kelimesini tekrar etmelisiniz.`;
+        target.status = 'needs-review';
+      } else {
+        adviceEl.innerText = "Harika gidiyorsun! Havuzun durumu gayet dengeli.";
+      }
+    }
+
+    // --- MÜKERRER KONTROLÜ ---
+    function normalizeWordKey(str) {
+      if (!str) return '';
+      return str.toLowerCase().replace(/^(der|die|das)\s+/i, '').trim();
+    }
+
+    function isDuplicateWord(newWordText) {
+      const key = normalizeWordKey(newWordText);
+      return words.some(w => normalizeWordKey(w.word) === key);
+    }
+
+    function sanitizeAndClassifyWord(item) {
+      let word = (item.word || '').trim();
+      let art = (item.article || '').toLowerCase().trim();
+      let type = (item.type || '').trim();
+
+      const articleMatch = word.match(/^(der|die|das)\s+(.*)/i);
+      if (articleMatch) {
+        art = articleMatch[1].toLowerCase();
+        word = `${art} ${articleMatch[2].charAt(0).toUpperCase() + articleMatch[2].slice(1)}`;
+        type = 'Nomen';
+      }
+
+      if (['der', 'die', 'das'].includes(art)) {
+        type = 'Nomen';
+        const parts = word.split(' ');
+        if(parts.length > 1) {
+          word = `${art} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
+        }
+      } else {
+        art = '';
+        if (type === 'Nomen') type = 'Verb';
+      }
+
+      if (type === 'Verb' || (!type && /^[a-zäöü].*(en|eln|ern)$/.test(word))) {
+        type = 'Verb';
+        art = '';
+        word = word.toLowerCase();
+      }
+
+      const commonOthers = ['weil', 'dass', 'obwohl', 'wenn', 'als', 'und', 'oder', 'aber', 'denn', 'sondern', 'mit', 'bei', 'nach', 'aus', 'zu', 'von', 'in', 'auf', 'an', 'über', 'unter', 'vor', 'hinter', 'neben', 'zwischen'];
+      if (commonOthers.includes(word.toLowerCase())) {
+        type = 'Andere';
+        art = '';
+      }
+
+      if (!['Nomen', 'Verb', 'Adjektiv', 'Andere'].includes(type)) type = 'Andere';
+
+      item.word = word;
+      item.article = art;
+      item.type = type;
+      if(item.wrongCount === undefined) item.wrongCount = 0;
+      if(item.correctCount === undefined) item.correctCount = 0;
+      return item;
+    }
+
+    // --- SES MOTORU (TTS) ---
+    function playAudio(text) {
+      if (!text || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'de-DE';
+      utterance.rate = 0.88;
+      
+      const voices = window.speechSynthesis.getVoices();
+      const deVoice = voices.find(v => v.lang && v.lang.startsWith('de'));
+      if (deVoice) utterance.voice = deVoice;
+      
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function speakCurrentWord() {
+      if (currentWordObj && currentWordObj.word) playAudio(currentWordObj.word);
+    }
+
+    function speakCurrentSentence() {
+      if (currentWordObj && currentWordObj.example) playAudio(currentWordObj.example);
+    }
+
+    // --- BULUT (FIREBASE) ---
     async function syncWithFirebase() {
+      const localWords = localStorage.getItem('wm_words');
+      if (localWords) {
+        try { words = JSON.parse(localWords).map(sanitizeAndClassifyWord); renderWords(); runAutonomousAnalysis(); } catch(e) {}
+      }
+
       const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
       if(!dbUrl) return;
 
@@ -72,32 +324,397 @@
         const res = await fetch(`${dbUrl}/words.json`);
         const data = await res.json();
         if(data) {
-          words = Array.isArray(data) ? data : Object.values(data);
-          autonomousUpdate(); // Veriyi çeker çekmez otonom analiz yap
+          const raw = Array.isArray(data) ? data : Object.values(data);
+          words = raw.map(sanitizeAndClassifyWord);
+          localStorage.setItem('wm_words', JSON.stringify(words));
+          renderWords();
+          runAutonomousAnalysis();
         }
       } catch(e) {}
     }
 
     async function saveWords() {
       localStorage.setItem('wm_words', JSON.stringify(words));
+      renderWords();
+      runAutonomousAnalysis();
+      
       const dbUrl = (localStorage.getItem('wm_db_url') || '').trim().replace(/\/$/, "");
       if(dbUrl) {
-        await fetch(`${dbUrl}/words.json`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(words)
-        });
+        try {
+          await fetch(`${dbUrl}/words.json`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(words)
+          });
+        } catch(e) {}
       }
     }
 
+    async function reclassifyAllWords() {
+      if (words.length === 0) { alert("Havuzda kelime yok."); return; }
+      words = words.map(sanitizeAndClassifyWord);
+      await saveWords();
+      alert("Tüm havuz Almanca kurallarına göre yeniden sınıflandırıldı!");
+    }
+
+    async function removeDuplicatesFromPool() {
+      if (words.length === 0) { alert("Havuzda kelime yok."); return; }
+      const initialCount = words.length;
+      const seen = new Set();
+      const uniqueWords = [];
+
+      for (const item of words) {
+        const key = normalizeWordKey(item.word);
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueWords.push(item);
+        }
+      }
+
+      const removedCount = initialCount - uniqueWords.length;
+      if (removedCount > 0) {
+        words = uniqueWords;
+        await saveWords();
+        alert(`${removedCount} adet çift kelime temizlendi!`);
+      } else {
+        alert("Havuzunuzda çift kelime yok!");
+      }
+    }
+
+    function cycleWordType(originalIndex) {
+      const types = ['Nomen', 'Verb', 'Adjektiv', 'Andere'];
+      const current = words[originalIndex].type || 'Andere';
+      const next = types[(types.indexOf(current) + 1) % types.length];
+      words[originalIndex].type = next;
+      if (next !== 'Nomen') words[originalIndex].article = '';
+      saveWords();
+    }
+
+    // --- GEMINI API ÇAĞRISI ---
+    async function callGemini(partsArray, isJson = false) {
+      const key = (localStorage.getItem('wm_api_key') || '').trim();
+      if(!key) { alert("Lütfen Gemini API anahtarınızı girin!"); return null; }
+      
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${key}`;
+      const payload = { contents: [{ parts: partsArray }] };
+      if (isJson) payload.generationConfig = { responseMimeType: "application/json" };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if(data.error) throw new Error(data.error.message);
+      return data.candidates[0].content.parts[0].text;
+    }
+
+    async function addSingleWord() {
+      const input = document.getElementById('new-word');
+      const btn = document.getElementById('add-btn');
+      const text = input.value.trim();
+      if(!text) return;
+
+      if (isDuplicateWord(text)) {
+        alert(`"${text}" kelimesi zaten havuzunuzda mevcut!`);
+        input.value = '';
+        return;
+      }
+
+      btn.innerText = "Gemini Çözümlüyor...";
+      btn.disabled = true;
+
+      const prompt = `Şu Almanca kelimeyi analiz et: "${text}".
+KURALLAR:
+1. type: "Nomen", "Verb", "Adjektiv", "Andere"
+2. SADECE Nomen ise başına der/die/das koy ve ilk harfi BÜYÜK yap.
+3. Fiil, sıfat ve bağlaçta article="" (BOŞ) olsun.
+JSON:
+{"word": "Kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der|die|das veya boş", "plural": "çoğul veya boş", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}`;
+
+      try {
+        const resText = await callGemini([{ text: prompt }], true);
+        const item = sanitizeAndClassifyWord(JSON.parse(resText));
+
+        if (isDuplicateWord(item.word)) {
+          alert(`"${item.word}" zaten havuzunuzda ekli!`);
+          return;
+        }
+
+        words.push(item);
+        await saveWords();
+        input.value = '';
+      } catch(e) {
+        alert("Hata: " + e.message);
+      } finally {
+        btn.innerText = "Gemini ile Çöz ve Ekle";
+        btn.disabled = false;
+      }
+    }
+
+    async function addBulkWords() {
+      const input = document.getElementById('bulk-text');
+      const btn = document.getElementById('bulk-btn');
+      const text = input.value.trim();
+      if(!text) return;
+
+      btn.innerText = "Kelimeler Ayrıştırılıyor...";
+      btn.disabled = true;
+
+      const prompt = `Metindeki Almanca kelimeleri ayıkla ve kategorize et:
+"""${text}"""
+Fiillere, sıfatlara artikel verme, sadece isimlere ver.
+JSON DİZİ (Array):
+[{"word": "kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der/die/das veya bos", "plural": "çoğul", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
+
+      try {
+        const resText = await callGemini([{ text: prompt }], true);
+        const items = JSON.parse(resText);
+        
+        let addedCount = 0;
+        let skippedCount = 0;
+
+        items.forEach(it => { 
+          const clean = sanitizeAndClassifyWord(it);
+          if (!isDuplicateWord(clean.word)) {
+            words.push(clean);
+            addedCount++;
+          } else {
+            skippedCount++;
+          }
+        });
+
+        await saveWords();
+        input.value = '';
+        alert(`${addedCount} yeni kelime eklendi, ${skippedCount} mükerrer atlandı.`);
+      } catch(e) {
+        alert("Toplu ekleme hatası: " + e.message);
+      } finally {
+        btn.innerText = "Toplu Listeyi Çöz ve Ekle";
+        btn.disabled = false;
+      }
+    }
+
+    async function processImageOCR() {
+      const fileInput = document.getElementById('ocr-image');
+      const btn = document.getElementById('ocr-btn');
+      if(!fileInput.files || fileInput.files.length === 0) { alert("Fotoğraf seçin!"); return; }
+
+      btn.innerText = "Fotoğraf Okunuyor...";
+      btn.disabled = true;
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result.split(',')[1];
+        const prompt = `Fotoğraftaki Almanca kelimeleri JSON dizisi olarak döndür:
+[{"word": "kelime", "type": "Nomen|Verb|Adjektiv|Andere", "article": "der/die/das veya bos", "plural": "çoğul", "tr": "Türkçesi", "example": "cümle", "example_tr": "çevirisi"}]`;
+        try {
+          const resText = await callGemini([{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Data } }], true);
+          const items = JSON.parse(resText);
+          
+          let addedCount = 0;
+          let skippedCount = 0;
+
+          items.forEach(it => { 
+            const clean = sanitizeAndClassifyWord(it);
+            if (!isDuplicateWord(clean.word)) {
+              words.push(clean);
+              addedCount++;
+            } else {
+              skippedCount++;
+            }
+          });
+
+          await saveWords();
+          fileInput.value = '';
+          alert(`Fotoğraftan ${addedCount} kelime eklendi, ${skippedCount} atlandı.`);
+        } catch(e) {
+          alert("OCR Hatası: " + e.message);
+        } finally {
+          btn.innerText = "Fotoğraftaki Kelimeleri Çıkar";
+          btn.disabled = false;
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setWordFilter(filterType, btn) {
+      activeFilter = filterType;
+      document.querySelectorAll('.filter-pills .pill').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      renderWords();
+    }
+
     function renderWords() {
+      const cntAll = words.length;
+      const cntNomen = words.filter(w => w.type === 'Nomen').length;
+      const cntVerb = words.filter(w => w.type === 'Verb').length;
+      const cntAdj = words.filter(w => w.type === 'Adjektiv').length;
+      const cntOther = words.filter(w => w.type === 'Andere').length;
+
+      document.getElementById('cnt-all').innerText = cntAll;
+      document.getElementById('cnt-nomen').innerText = cntNomen;
+      document.getElementById('cnt-verb').innerText = cntVerb;
+      document.getElementById('cnt-adj').innerText = cntAdj;
+      document.getElementById('cnt-other').innerText = cntOther;
+
+      const searchTerm = (document.getElementById('word-search').value || '').toLowerCase().trim();
+
+      const filtered = words.map((w, originalIdx) => ({ ...w, originalIdx })).filter(w => {
+        const typeMatch = (activeFilter === 'all') || (w.type === activeFilter);
+        const searchMatch = !searchTerm || 
+          (w.word && w.word.toLowerCase().includes(searchTerm)) || 
+          (w.tr && w.tr.toLowerCase().includes(searchTerm));
+
+        return typeMatch && searchMatch;
+      });
+
       const list = document.getElementById('word-list');
-      list.innerHTML = words.map(w => `
-        <div class="word-card ${w.status === 'needs-review' ? 'needs-review' : ''}">
-          <strong>${w.word}</strong> ${w.status === 'needs-review' ? '<span class="status-pill">TEKRARLA</span>' : ''}
-          <p>${w.tr}</p>
+      if (filtered.length === 0) {
+        list.innerHTML = `<p style="color:#64748b; text-align:center; padding:20px;">Bu filtrede kelime bulunamadı.</p>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(w => {
+        const pluralText = w.plural ? ` (${w.plural})` : '';
+        const reviewClass = w.status === 'needs-review' ? 'needs-review' : (w.article || '');
+        return `
+        <div class="word-card ${reviewClass}">
+          <button class="del-btn" onclick="deleteWord(${w.originalIdx})">Sil</button>
+          <strong>${w.word}</strong>${pluralText} 
+          <span class="word-type-tag" onclick="cycleWordType(${w.originalIdx})">${w.type || 'DİĞER'}</span> - <em>${w.tr}</em>
+          <button class="audio-btn-mini" onclick="playAudio('${w.word.replace(/'/g, "\\'")}')">🔊 Dinle</button><br>
+          <small style="color:#94a3b8;">${w.example || ''} — <em>${w.example_tr || ''}</em></small>
         </div>
-      `).join('');
+      `}).reverse().join('');
+    }
+
+    async function deleteWord(originalIndex) {
+      words.splice(originalIndex, 1);
+      await saveWords();
+    }
+
+    function getActiveCardDeck() {
+      if (activeCardGroup === 'all') return words;
+      return words.filter(w => w.type === activeCardGroup);
+    }
+
+    function changeCardGroup(group) {
+      activeCardGroup = group;
+      currentCardIdx = 0;
+      currentStreak = 0;
+      loadCard();
+    }
+
+    function loadCard() {
+      const deck = getActiveCardDeck();
+
+      if(deck.length === 0) {
+        document.getElementById('card-word').innerText = "Bu grupta kelime yok";
+        document.getElementById('card-type-badge').innerText = "";
+        document.getElementById('front-audio-btn').style.display = 'none';
+        document.getElementById('article-guess-section').style.display = 'none';
+        document.getElementById('card-back-box').style.display = 'none';
+        document.getElementById('card-index-stat').innerText = "0/0";
+        document.getElementById('progress-bar').style.width = "0%";
+        currentWordObj = null;
+        return;
+      }
+
+      isFlipped = false;
+      const currentIdx = currentCardIdx % deck.length;
+      currentWordObj = deck[currentIdx];
+
+      document.getElementById('card-index-stat').innerText = `${currentIdx + 1}/${deck.length}`;
+      document.getElementById('progress-bar').style.width = `${((currentIdx + 1) / deck.length) * 100}%`;
+      document.getElementById('streak-stat').innerText = `${currentStreak} 🔥`;
+
+      const isNoun = currentWordObj.type === 'Nomen' && ['der', 'die', 'das'].includes((currentWordObj.article || '').toLowerCase());
+      document.getElementById('card-type-badge').innerText = currentWordObj.type || 'Wort';
+
+      if(isNoun) {
+        const cleanNoun = currentWordObj.word.replace(/^(der|die|das)\s+/i, '');
+        document.getElementById('card-word').innerText = `... ${cleanNoun}`;
+        document.getElementById('article-guess-section').style.display = 'grid';
+        document.getElementById('shortcuts-info').innerText = "Kısayollar: 1: der | 2: die | 3: das | Boşluk: Çevir | R: Dinle";
+      } else {
+        document.getElementById('card-word').innerText = currentWordObj.word;
+        document.getElementById('article-guess-section').style.display = 'none';
+        document.getElementById('shortcuts-info').innerText = "Kısayollar: Boşluk: Kartı Çevir | R: Sesi Dinle";
+      }
+
+      document.getElementById('front-audio-btn').style.display = 'inline-flex';
+      document.getElementById('card-back-box').style.display = 'none';
+      
+      const pluralInfo = currentWordObj.plural ? ` (${currentWordObj.plural})` : '';
+      document.getElementById('card-tr').innerText = `${currentWordObj.word}${pluralInfo} = ${currentWordObj.tr}`;
+      document.getElementById('card-example').innerText = currentWordObj.example || '';
+      document.getElementById('card-example-tr').innerText = currentWordObj.example_tr || '';
+    }
+
+    function flipCard() {
+      if(!currentWordObj) return;
+      isFlipped = !isFlipped;
+      document.getElementById('card-word').innerText = currentWordObj.word;
+      document.getElementById('card-back-box').style.display = isFlipped ? 'block' : 'none';
+    }
+
+    function guessArticle(guessed) {
+      if(!currentWordObj) return;
+      const correct = (currentWordObj.article || '').toLowerCase().trim();
+
+      if(guessed === correct) {
+        currentStreak++;
+        currentWordObj.correctCount = (currentWordObj.correctCount || 0) + 1;
+        flipCard();
+        speakCurrentWord();
+      } else {
+        currentStreak = 0;
+        currentWordObj.wrongCount = (currentWordObj.wrongCount || 0) + 1;
+        alert(`Yanlış! Doğru artikel: ${correct.toUpperCase()}`);
+        flipCard();
+        speakCurrentWord();
+      }
+      document.getElementById('streak-stat').innerText = `${currentStreak} 🔥`;
+      saveWords();
+    }
+
+    async function answerCard(known) {
+      const deck = getActiveCardDeck();
+      if(deck.length === 0) return;
+      if(known) {
+        currentStreak++;
+        currentWordObj.correctCount = (currentWordObj.correctCount || 0) + 1;
+      } else {
+        currentStreak = 0;
+        currentWordObj.wrongCount = (currentWordObj.wrongCount || 0) + 1;
+      }
+      currentCardIdx++;
+      await saveWords();
+      loadCard();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      const activeTab = document.getElementById('tab-cards').classList.contains('active');
+      if(!activeTab || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+      if(e.code === 'Space') { e.preventDefault(); flipCard(); }
+      
+      const isNoun = currentWordObj && currentWordObj.type === 'Nomen';
+      if(isNoun) {
+        if(e.key === '1') guessArticle('der');
+        if(e.key === '2') guessArticle('die');
+        if(e.key === '3') guessArticle('das');
+      }
+      
+      if(e.key.toLowerCase() === 'r') {
+        if(isFlipped) speakCurrentSentence(); else speakCurrentWord();
+      }
+    });
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     }
 
     window.onload = syncWithFirebase;
